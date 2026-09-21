@@ -1,6 +1,7 @@
 __version__ = "0.0.2"
 
 import argparse
+from contextlib import nullcontext
 from pathlib import Path
 
 from mistral_common.tokens.tokenizers.base import SpecialTokenPolicy
@@ -21,7 +22,7 @@ def _build_prompt_tokens(
     num_delay_tokens: int = 6,
 ) -> tuple[list[int], int]:
     streaming_pad = sp.get_special_token("[STREAMING_PAD]")
-    prefix_len = n_left_pad_tokens + num_delay_tokens  # 38 STREAMING_PAD tokens
+    prefix_len = n_left_pad_tokens + num_delay_tokens
     tokens = [sp.bos_id] + [streaming_pad] * prefix_len
     return tokens, num_delay_tokens
 
@@ -63,19 +64,35 @@ def main():
     parser.add_argument("--audio", default=None, help="Path to audio file (omit to stream from mic)")
     parser.add_argument("--model", default="mlx-community/Voxtral-Mini-4B-Realtime-6bit", help="Model path or HF model ID")
     parser.add_argument("--temp", type=float, default=0.0, help="Sampling temperature (0 = greedy)")
+    parser.add_argument("--context-size", type=int, default=8192, help="Live decoder context in tokens (must fit streaming prompt; try 512)")
+    parser.add_argument("--delay-ms", type=int, default=480, help="Live transcription delay: multiples of 80 from 80 to 1200, or 2400")
+    parser.add_argument("--translate-en", action="store_true", help="Translate French speech into English locally; display both languages")
     args = parser.parse_args()
 
-    if args.audio is not None:
-        text = transcribe(
-            args.audio,
-            model_path=args.model,
-            temperature=args.temp,
-        )
-        print(text)
-    else:
-        from .stream import stream_transcribe
+    output = nullcontext()
+    if args.translate_en:
+        from .translation import LiveTranslation, load_french_english
 
-        stream_transcribe(
-            model_path=args.model,
-            temperature=args.temp,
-        )
+        output = LiveTranslation(load_french_english())
+
+    with output as translation:
+        if args.audio is not None:
+            text = transcribe(
+                args.audio,
+                model_path=args.model,
+                temperature=args.temp,
+            )
+            if translation is None:
+                print(text)
+            else:
+                translation.write(text)
+        else:
+            from .stream import stream_transcribe
+
+            stream_transcribe(
+                model_path=args.model,
+                temperature=args.temp,
+                context_size=args.context_size,
+                delay_ms=args.delay_ms,
+                on_text=translation.write if translation is not None else None,
+            )

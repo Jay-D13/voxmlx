@@ -12,16 +12,26 @@ from .audio import SAMPLES_PER_TOKEN, log_mel_spectrogram_step
 from .cache import RotatingKVCache
 
 N_LEFT_PAD_TOKENS = 32
-N_RIGHT_PAD_TOKENS = 17
+N_FLUSH_PAD_TOKENS = 11  # Additional padding beyond the transcription delay.
 
 
 def stream_transcribe(
     model_path: str = "mlx-community/Voxtral-Mini-4B-Realtime-6bit",
     temperature: float = 0.0,
+    context_size: int = 8192,
+    delay_ms: int = 480,
+    on_text=None,
 ):
+    if delay_ms not in (*range(80, 1201, 80), 2400):
+        raise ValueError("delay_ms must be a multiple of 80 from 80 to 1200, or 2400")
+    n_delay_tokens = delay_ms // 80
+    min_context = 1 + N_LEFT_PAD_TOKENS + n_delay_tokens
+    if context_size < min_context:
+        raise ValueError(f"context_size must be at least {min_context} tokens for the streaming prompt")
+    emit = on_text if on_text is not None else lambda text: print(text, end="", flush=True)
     model, sp, config = load_model(model_path)
 
-    prompt_tokens, n_delay_tokens = _build_prompt_tokens(sp)
+    prompt_tokens, n_delay_tokens = _build_prompt_tokens(sp, num_delay_tokens=n_delay_tokens)
     prefix_len = len(prompt_tokens)
     eos_token_id = sp.eos_id
 
@@ -33,7 +43,7 @@ def stream_transcribe(
     mx.eval(text_embeds)
 
     n_layers = len(model.language_model.layers)
-    sliding_window = 8192
+    sliding_window = context_size
 
     def sample(logits):
         if temperature <= 0:
@@ -56,7 +66,7 @@ def stream_transcribe(
 
             token_id = y.item()
             if token_id == eos_token_id:
-                print(flush=True)
+                emit("\n")
                 cache = None
                 y = None
                 return i, True
@@ -64,7 +74,7 @@ def stream_transcribe(
             text = sp.decode(
                 [token_id], special_token_policy=SpecialTokenPolicy.IGNORE
             )
-            print(text, end="", flush=True)
+            emit(text)
 
             if i > 0 and i % 256 == 0:
                 mx.clear_cache()
@@ -276,7 +286,8 @@ def stream_transcribe(
 
             pending_audio = np.append(pending_audio, final_audio)
             right_pad = np.zeros(
-                N_RIGHT_PAD_TOKENS * SAMPLES_PER_TOKEN, dtype=np.float32
+                (n_delay_tokens + N_FLUSH_PAD_TOKENS) * SAMPLES_PER_TOKEN,
+                dtype=np.float32,
             )
             flush_chunk = np.concatenate([pending_audio, right_pad])
             mel, audio_tail = log_mel_spectrogram_step(flush_chunk, audio_tail)
@@ -301,8 +312,8 @@ def stream_transcribe(
                 text = sp.decode(
                     [token_id], special_token_policy=SpecialTokenPolicy.IGNORE
                 )
-                print(text, end="", flush=True)
-        print()
+                emit(text)
+        emit("\n")
 
 
 def main():
@@ -315,6 +326,14 @@ def main():
         help="Model path or HF model ID",
     )
     parser.add_argument(
+        "--context-size", type=int, default=8192,
+        help="Decoder context in tokens (must fit streaming prompt; try 512)",
+    )
+    parser.add_argument(
+        "--delay-ms", type=int, default=480,
+        help="Transcription delay: multiples of 80 from 80 to 1200, or 2400",
+    )
+    parser.add_argument(
         "--temp",
         type=float,
         default=0.0,
@@ -325,4 +344,6 @@ def main():
     stream_transcribe(
         model_path=args.model,
         temperature=args.temp,
+        context_size=args.context_size,
+        delay_ms=args.delay_ms,
     )

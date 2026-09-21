@@ -19,6 +19,12 @@ dependencies = [
     "sentencepiece",
 ]
 
+[project.optional-dependencies]
+translation = ["argostranslate>=1.11,<2"]
+
+[tool.setuptools]
+packages = ["voxmlx"]
+
 [tool.setuptools.dynamic]
 version = {attr = "voxmlx.__version__"}
 
