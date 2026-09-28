@@ -7,12 +7,11 @@ import numpy as np
 import sounddevice as sd
 from mistral_common.tokens.tokenizers.base import SpecialTokenPolicy
 
-from . import _build_prompt_tokens, load_model
-from .audio import SAMPLES_PER_TOKEN, log_mel_spectrogram_step
+from . import _build_prompt_tokens, _delay_tokens, load_model
+from .audio import N_FLUSH_PAD_TOKENS, SAMPLES_PER_TOKEN, log_mel_spectrogram_step
 from .cache import RotatingKVCache
 
 N_LEFT_PAD_TOKENS = 32
-N_FLUSH_PAD_TOKENS = 11  # Additional padding beyond the transcription delay.
 
 
 def stream_transcribe(
@@ -23,12 +22,10 @@ def stream_transcribe(
     on_text=None,
     audio_batch_ms: int = 80,
 ):
-    if delay_ms not in (*range(80, 1201, 80), 2400):
-        raise ValueError("delay_ms must be a multiple of 80 from 80 to 1200, or 2400")
+    n_delay_tokens = _delay_tokens(delay_ms)
     if audio_batch_ms not in (80, 160, 320):
         raise ValueError("audio_batch_ms must be 80, 160, or 320")
     batch_samples = audio_batch_ms // 80 * SAMPLES_PER_TOKEN
-    n_delay_tokens = delay_ms // 80
     min_context = 1 + N_LEFT_PAD_TOKENS + n_delay_tokens
     if context_size < min_context:
         raise ValueError(f"context_size must be at least {min_context} tokens for the streaming prompt")

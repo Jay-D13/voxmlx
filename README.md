@@ -136,6 +136,11 @@ cache uses the model's configured sliding window.
 voxmlx --audio audio.flac
 ```
 
+Files default to the model's longest delay, 2,400 ms: latency doesn't matter
+offline, and [Mistral reports](https://huggingface.co/mistralai/Voxtral-Mini-4B-Realtime-2602)
+fewer errors at longer delays (FLEURS French WER 6.42% at 480 ms, 5.23% at
+2,400 ms). Pass `--delay-ms` to override it.
+
 **Options:**
 
 | Flag | Description | Default |
@@ -145,7 +150,7 @@ voxmlx --audio audio.flac
 | `--temp` | Sampling temperature (`0` = greedy) | `0.0` |
 | `--context-size` | Live decoder context; must fit `33 + delay_ms / 80` tokens | `8192` |
 | `--audio-batch-ms` | Minimum live audio batch: `80`, `160`, or `320` ms | `80` |
-| `--delay-ms` | Live delay: multiples of 80 from 80–1200, or 2400 | `480` |
+| `--delay-ms` | Transcription delay: multiples of 80 from 80–1200, or 2400 | `480` live, `2400` with `--audio` |
 | `--translation-idle-ms` | Pause before completing an unpunctuated sentence; positive finite milliseconds | `1500` |
 | `--translate-en` | Local French-to-English translation; show English live | Off |
 | `--transcript` | Append the transcript to a file; French and English pairs with `--translate-en` | None |

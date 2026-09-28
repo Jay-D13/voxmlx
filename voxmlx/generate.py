@@ -1,6 +1,6 @@
 import mlx.core as mx
 
-from .audio import load_audio, log_mel_spectrogram, pad_audio
+from .audio import N_FLUSH_PAD_TOKENS, load_audio, log_mel_spectrogram, pad_audio
 from .cache import RotatingKVCache
 from .model import VoxtralRealtime
 
@@ -14,9 +14,10 @@ def generate(
     eos_token_id: int = 2,
     sliding_window: int = 8192,
 ) -> list[int]:
-    # 1. Load audio, pad for streaming, and compute mel spectrogram
+    # 1. Load audio, pad for streaming, and compute mel spectrogram.
+    # The right pad must outlast the delay, or the last words are never emitted.
     audio = load_audio(audio_path)
-    audio = pad_audio(audio)
+    audio = pad_audio(audio, n_right_pad_tokens=n_delay_tokens + N_FLUSH_PAD_TOKENS)
     mel = log_mel_spectrogram(audio)  # [n_mels, T]
 
     # 2. Encode audio
