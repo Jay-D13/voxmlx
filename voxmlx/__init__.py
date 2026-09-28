@@ -1,7 +1,8 @@
 __version__ = "0.0.2"
 
 import argparse
-from contextlib import nullcontext
+import math
+from contextlib import ExitStack
 from pathlib import Path
 
 from mistral_common.tokens.tokenizers.base import SpecialTokenPolicy
@@ -66,26 +67,38 @@ def main():
     parser.add_argument("--temp", type=float, default=0.0, help="Sampling temperature (0 = greedy)")
     parser.add_argument("--context-size", type=int, default=8192, help="Live decoder context in tokens (must fit streaming prompt; try 512)")
     parser.add_argument("--delay-ms", type=int, default=480, help="Live transcription delay: multiples of 80 from 80 to 1200, or 2400")
-    parser.add_argument("--translate-en", action="store_true", help="Translate French speech into English locally; display both languages")
+    parser.add_argument("--translate-en", action="store_true", help="Translate French speech into English locally; show English live")
+    parser.add_argument("--transcript", type=Path, help="Append the transcript to this file (French and English pairs with --translate-en)")
+    parser.add_argument("--audio-batch-ms", type=int, choices=(80, 160, 320), default=80, help="Minimum live audio batch in ms (larger batches add buffering latency)")
+    parser.add_argument("--translation-idle-ms", type=float, default=1500, help="Pause before completing an unpunctuated sentence (default: 1500 ms)")
     args = parser.parse_args()
+    if not math.isfinite(args.translation_idle_ms) or args.translation_idle_ms <= 0:
+        parser.error("--translation-idle-ms must be positive and finite")
 
-    output = nullcontext()
-    if args.translate_en:
-        from .translation import LiveTranslation, load_french_english
+    with ExitStack() as stack:
+        record = None
+        if args.transcript is not None:
+            record = stack.enter_context(args.transcript.open("a", encoding="utf-8"))
+        if args.translate_en:
+            from .translation import LiveTranslation, load_french_english
 
-        output = LiveTranslation(load_french_english())
+            translation = LiveTranslation(load_french_english(), idle_seconds=args.translation_idle_ms / 1000,
+                                          record=record)
+            on_text = stack.enter_context(translation).write
+        else:
+            def on_text(text):
+                print(text, end="", flush=True)
+                if record is not None:
+                    record.write(text)
+                    record.flush()
 
-    with output as translation:
         if args.audio is not None:
             text = transcribe(
                 args.audio,
                 model_path=args.model,
                 temperature=args.temp,
             )
-            if translation is None:
-                print(text)
-            else:
-                translation.write(text)
+            on_text(text if args.translate_en else text + "\n")
         else:
             from .stream import stream_transcribe
 
@@ -94,5 +107,6 @@ def main():
                 temperature=args.temp,
                 context_size=args.context_size,
                 delay_ms=args.delay_ms,
-                on_text=translation.write if translation is not None else None,
+                audio_batch_ms=args.audio_batch_ms,
+                on_text=on_text,
             )

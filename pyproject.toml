@@ -31,3 +31,7 @@ version = {attr = "voxmlx.__version__"}
 [project.scripts]
 voxmlx = "voxmlx:main"
 voxmlx-convert = "voxmlx.convert:main"
+
+[tool.uv]
+# The launcher installs a wheel; source edits must invalidate that cached build.
+cache-keys = [{ file = "pyproject.toml" }, { file = "voxmlx/**/*.py" }, { file = "README.md" }]

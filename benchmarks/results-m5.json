@@ -1,0 +1,346 @@
+{
+  "date": "2026-09-22",
+  "hardware": "Apple M5, 24 GiB",
+  "os": "macOS-27.0-arm64-arm-64bit",
+  "python": "3.12.11",
+  "mlx": "0.32.2",
+  "model": "mlx-community/Voxtral-Mini-4B-Realtime-6bit",
+  "model_revision": "02eb0caeb9dafb554c17a72b93dbf40cd3736c31",
+  "context_size": 512,
+  "delay_ms": 480,
+  "precision": "default",
+  "components": {
+    "medians": [
+      {
+        "variant": "baseline",
+        "batch_ms": 80,
+        "mel_ms": 93.4708760214562,
+        "encoder_ms": 4064.360124992163,
+        "decoder_ms": 6257.625877004102,
+        "total_ms": 10330.353749999631,
+        "decode_steps": 242,
+        "encoder_ms_per_audio_second": 203.21800624960815,
+        "processing_rtf": 0.5165176874999815,
+        "mel_reference_max_abs_error": 0.00638159083542722,
+        "audio_seconds": 20.0,
+        "peak_memory_gb": 3.957530372,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "candidate",
+        "batch_ms": 80,
+        "mel_ms": 71.3465029875806,
+        "encoder_ms": 3959.7810010054673,
+        "decoder_ms": 6262.292955003431,
+        "total_ms": 10224.62304200053,
+        "decode_steps": 242,
+        "encoder_ms_per_audio_second": 197.98905005027336,
+        "processing_rtf": 0.5112311521000266,
+        "mel_reference_max_abs_error": 0.0001959761102130475,
+        "audio_seconds": 20.0,
+        "peak_memory_gb": 3.93178596,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "baseline",
+        "batch_ms": 160,
+        "mel_ms": 42.798661006600014,
+        "encoder_ms": 2450.6453739977587,
+        "decoder_ms": 6085.885966018395,
+        "total_ms": 8583.402000000206,
+        "decode_steps": 242,
+        "encoder_ms_per_audio_second": 122.53226869988794,
+        "processing_rtf": 0.42917010000001027,
+        "mel_reference_max_abs_error": 0.00638159083542722,
+        "audio_seconds": 20.0,
+        "peak_memory_gb": 3.964162372,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "candidate",
+        "batch_ms": 160,
+        "mel_ms": 37.40745900540787,
+        "encoder_ms": 2625.881833006133,
+        "decoder_ms": 6254.339213001003,
+        "total_ms": 8922.519749999992,
+        "decode_steps": 242,
+        "encoder_ms_per_audio_second": 131.29409165030665,
+        "processing_rtf": 0.4461259874999996,
+        "mel_reference_max_abs_error": 0.0001959761102130475,
+        "audio_seconds": 20.0,
+        "peak_memory_gb": 3.957939572,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "baseline",
+        "batch_ms": 320,
+        "mel_ms": 23.089332007657504,
+        "encoder_ms": 1727.6896699877398,
+        "decoder_ms": 6069.623206001779,
+        "total_ms": 7823.359125000934,
+        "decode_steps": 242,
+        "encoder_ms_per_audio_second": 86.38448349938699,
+        "processing_rtf": 0.3911679562500467,
+        "mel_reference_max_abs_error": 0.00638159083542722,
+        "audio_seconds": 20.0,
+        "peak_memory_gb": 3.98585218,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "candidate",
+        "batch_ms": 320,
+        "mel_ms": 20.320998002716806,
+        "encoder_ms": 1767.834580010458,
+        "decoder_ms": 6151.605703009409,
+        "total_ms": 7943.527500001437,
+        "decode_steps": 242,
+        "encoder_ms_per_audio_second": 88.3917290005229,
+        "processing_rtf": 0.39717637500007186,
+        "mel_reference_max_abs_error": 0.0001959761102130475,
+        "audio_seconds": 20.0,
+        "peak_memory_gb": 3.971404644,
+        "memory_gb": 24.0
+      }
+    ],
+    "mode": "components",
+    "baseline": "cb44b5a",
+    "repeats": 3
+  },
+  "paced_synthetic_french_speech": {
+    "medians": [
+      {
+        "variant": "baseline",
+        "batch_ms": 80,
+        "total_ms": 8657.192458000281,
+        "first_text_ms": 1561.2297494999439,
+        "max_audio_backlog_ms": 80.0,
+        "mel_reference_max_abs_error": 0.04279686220687484,
+        "audio_seconds": 8.08,
+        "peak_memory_gb": 3.994706232,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "candidate",
+        "batch_ms": 80,
+        "total_ms": 8775.556416499967,
+        "first_text_ms": 1550.6461459999628,
+        "max_audio_backlog_ms": 120.0,
+        "mel_reference_max_abs_error": 0.0001900132315695302,
+        "audio_seconds": 8.08,
+        "peak_memory_gb": 3.91558292,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "candidate",
+        "batch_ms": 160,
+        "total_ms": 8701.241041500907,
+        "first_text_ms": 1579.6046045006733,
+        "max_audio_backlog_ms": 160.0,
+        "mel_reference_max_abs_error": 0.0001900132315695302,
+        "audio_seconds": 8.08,
+        "peak_memory_gb": 3.915582984,
+        "memory_gb": 24.0
+      },
+      {
+        "variant": "candidate",
+        "batch_ms": 320,
+        "total_ms": 8756.586499499463,
+        "first_text_ms": 1751.214353999785,
+        "max_audio_backlog_ms": 320.0,
+        "mel_reference_max_abs_error": 0.0001900132315695302,
+        "audio_seconds": 8.08,
+        "peak_memory_gb": 3.914521544,
+        "memory_gb": 24.0
+      }
+    ],
+    "mode": "paced",
+    "baseline": "cb44b5a",
+    "repeats": 2
+  },
+  "speech_source": "macOS say, voice Thomas",
+  "speech_text": "Bonjour. Nous testons la transcription en temps réel. Le modèle fonctionne sur cet ordinateur, sans connexion à Internet.",
+  "compilation_probe": {
+    "method": "First encoder/decoder feed-forward block; actual 6-bit weights; seeded random input; mx.compile(module); 5 warmups and 50 synchronized iterations per variant in each of 3 alternating repetitions.",
+    "initial": [
+      {
+        "component": "encoder",
+        "frames": 4,
+        "ms": {
+          "plain": 0.32993750028254,
+          "compiled": 0.32787500003905734
+        },
+        "runs": {
+          "plain": [
+            0.3345414997966145,
+            0.32993750028254,
+            0.3297084995210753
+          ],
+          "compiled": [
+            0.3274789996794425,
+            0.32787500003905734,
+            0.33172950043081073
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": 0.6251184668964349
+      },
+      {
+        "component": "encoder",
+        "frames": 8,
+        "ms": {
+          "plain": 0.5071039995527826,
+          "compiled": 0.43925049976678565
+        },
+        "runs": {
+          "plain": [
+            0.4141255003560218,
+            0.6694375006190967,
+            0.5071039995527826
+          ],
+          "compiled": [
+            0.4248329996698885,
+            0.5693129996870994,
+            0.43925049976678565
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": 13.380588566810214
+      },
+      {
+        "component": "encoder",
+        "frames": 16,
+        "ms": {
+          "plain": 0.6605410007978207,
+          "compiled": 0.6643125007030903
+        },
+        "runs": {
+          "plain": [
+            0.6660004992227186,
+            0.658979000945692,
+            0.6605410007978207
+          ],
+          "compiled": [
+            0.661103999846091,
+            0.6643125007030903,
+            0.6672499994238024
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": -0.5709713554062912
+      },
+      {
+        "component": "decoder",
+        "frames": 1,
+        "ms": {
+          "plain": 0.7641045012860559,
+          "compiled": 0.7588335001855739
+        },
+        "runs": {
+          "plain": [
+            0.7611250002810266,
+            0.7671245002711657,
+            0.7641045012860559
+          ],
+          "compiled": [
+            0.7588335001855739,
+            0.7666039991818252,
+            0.7550000009359792
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": 0.6898272542054662
+      }
+    ],
+    "repeat": [
+      {
+        "component": "encoder",
+        "frames": 4,
+        "ms": {
+          "plain": 0.329937000060454,
+          "compiled": 0.3284379999968223
+        },
+        "runs": {
+          "plain": [
+            0.3370835001987871,
+            0.329937000060454,
+            0.3284170006736531
+          ],
+          "compiled": [
+            0.32916649979597423,
+            0.3284379999968223,
+            0.32816699967952445
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": 0.4543291790120585
+      },
+      {
+        "component": "encoder",
+        "frames": 8,
+        "ms": {
+          "plain": 0.4201874999125721,
+          "compiled": 0.4189370001768111
+        },
+        "runs": {
+          "plain": [
+            0.4182920001767343,
+            0.4201874999125721,
+            0.4208750006000628
+          ],
+          "compiled": [
+            0.4189370001768111,
+            0.42031249995488906,
+            0.4188959992461605
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": 0.2976051729337903
+      },
+      {
+        "component": "encoder",
+        "frames": 16,
+        "ms": {
+          "plain": 0.6792499998482526,
+          "compiled": 0.6641874997512787
+        },
+        "runs": {
+          "plain": [
+            0.6846460009910516,
+            0.6648540002061054,
+            0.6792499998482526
+          ],
+          "compiled": [
+            0.6804790000387584,
+            0.6641874997512787,
+            0.6581869993169676
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": 2.2175193375545077
+      },
+      {
+        "component": "decoder",
+        "frames": 1,
+        "ms": {
+          "plain": 0.7543744995928137,
+          "compiled": 0.7574789988211705
+        },
+        "runs": {
+          "plain": [
+            0.7543744995928137,
+            0.7554165003966773,
+            0.7483749996026745
+          ],
+          "compiled": [
+            0.7574789988211705,
+            0.757916500333522,
+            0.750729500396119
+          ]
+        },
+        "max_abs_diff": 0.0,
+        "improvement_pct": -0.4115328964635623
+      }
+    ],
+    "decision": "Not enabled: no repeatable improvement of at least 5%."
+  }
+}

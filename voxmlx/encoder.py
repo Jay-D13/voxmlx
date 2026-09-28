@@ -1,6 +1,8 @@
 import mlx.core as mx
 import mlx.nn as nn
 
+from .cache import RotatingKVCache
+
 
 class CausalConv1d(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1):
@@ -48,6 +50,16 @@ class EncoderAttention(nn.Module):
 
         if cache is not None:
             k, v = cache.update_and_fetch(k, v)
+            # Chunked caches retain extra keys for the earliest query. Mask those
+            # keys for later queries so the receptive field is batch-independent.
+            if L > 1 and cache.offset > cache.max_size:
+                queries = offset + mx.arange(L)[:, None]
+                keys = cache.offset - k.shape[2] + mx.arange(k.shape[2])[None, :]
+                mask = (keys <= queries) & (keys > queries - cache.max_size)
+            elif L == 1:
+                # A single query can attend to the entire rotating cache;
+                # physical key order is immaterial in this case.
+                mask = None
 
         out = mx.fast.scaled_dot_product_attention(q, k, v, scale=self.scale, mask=mask)
         out = out.transpose(0, 2, 1, 3).reshape(B, L, -1)
@@ -152,8 +164,12 @@ class CausalWhisperEncoder(nn.Module):
 
     def __call__(self, mel: mx.array) -> mx.array:
         x = self.forward_conv(mel.astype(self.conv1.weight.dtype))  # [1, T/2, dim]
-        mask = "causal"
-        for layer in self.layers:
-            x = layer(x, offset=0, mask=mask)
-        x = self.norm(x)
-        return x  # [1, T/2, dim]
+        # Run window-sized chunks through the streaming KV-cache path so each
+        # frame attends to at most `sliding_window` frames, matching training
+        # and streaming, and cost and memory stay linear in file length.
+        cache = [RotatingKVCache(self.sliding_window) for _ in self.layers]
+        chunks = []
+        for start in range(0, x.shape[1], self.sliding_window):
+            chunks.append(self.forward_transformer(x[:, start:start + self.sliding_window], cache))
+            mx.eval(chunks[-1])
+        return mx.concatenate(chunks, axis=1)  # [1, T/2, dim]

@@ -21,9 +21,13 @@ def stream_transcribe(
     context_size: int = 8192,
     delay_ms: int = 480,
     on_text=None,
+    audio_batch_ms: int = 80,
 ):
     if delay_ms not in (*range(80, 1201, 80), 2400):
         raise ValueError("delay_ms must be a multiple of 80 from 80 to 1200, or 2400")
+    if audio_batch_ms not in (80, 160, 320):
+        raise ValueError("audio_batch_ms must be 80, 160, or 320")
+    batch_samples = audio_batch_ms // 80 * SAMPLES_PER_TOKEN
     n_delay_tokens = delay_ms // 80
     min_context = 1 + N_LEFT_PAD_TOKENS + n_delay_tokens
     if context_size < min_context:
@@ -50,12 +54,27 @@ def stream_transcribe(
             return mx.argmax(logits[0, -1:], axis=-1).squeeze()
         return mx.random.categorical(logits[0, -1:] / temperature).squeeze()
 
+    def emit_pending():
+        """Emit y unless already shown. Returns True on EOS, resetting cache and y."""
+        nonlocal cache, y, y_emitted
+        if y_emitted:
+            return False
+        token_id = y.item()
+        if token_id == eos_token_id:
+            emit("\n")
+            cache = None
+            y = None
+            return True
+        emit(sp.decode([token_id], special_token_policy=SpecialTokenPolicy.IGNORE))
+        y_emitted = True
+        return False
+
     def decode_steps(embeds, n_to_decode):
         """Decode n_to_decode positions from embeds[0..n_to_decode-1].
 
         Returns (n_consumed, hit_eos). On EOS, cache and y are reset.
         """
-        nonlocal cache, y
+        nonlocal y, y_emitted
 
         for i in range(n_to_decode):
             token_embed = model.language_model.embed(y.reshape(1, 1))[0, 0]
@@ -64,37 +83,32 @@ def stream_transcribe(
             next_y = sample(logits)
             mx.async_eval(next_y)
 
-            token_id = y.item()
-            if token_id == eos_token_id:
-                emit("\n")
-                cache = None
-                y = None
+            # Emit the previous token while the GPU computes the next one.
+            if emit_pending():
                 return i, True
-
-            text = sp.decode(
-                [token_id], special_token_policy=SpecialTokenPolicy.IGNORE
-            )
-            emit(text)
 
             if i > 0 and i % 256 == 0:
                 mx.clear_cache()
 
-            y = next_y
+            y, y_emitted = next_y, False
 
-        return n_to_decode, False
+        # Show the newest prediction now, not when the next audio chunk arrives.
+        return n_to_decode, emit_pending()
 
     # Audio buffer and lock
-    lock = threading.Lock()
+    condition = threading.Condition()
     audio_buf = np.zeros(0, dtype=np.float32)
 
     def callback(indata, frames, time_info, status):
         nonlocal audio_buf
-        with lock:
+        with condition:
             audio_buf = np.append(audio_buf, indata[:, 0])
+            condition.notify()
 
     # Decoder state
     cache = None
     y = None
+    y_emitted = False
 
     # Incremental encoder state
     audio_tail = None       # mel STFT overlap (240 samples)
@@ -113,206 +127,134 @@ def stream_transcribe(
 
     def reset_all_state():
         nonlocal audio_tail, conv1_tail, conv2_tail, encoder_cache, ds_buf
-        nonlocal pending_audio, audio_embeds, n_audio_samples_fed
+        nonlocal audio_embeds, n_audio_samples_fed
         nonlocal n_total_decoded, first_cycle, prefilled
         audio_tail = None
         conv1_tail = None
         conv2_tail = None
         encoder_cache = None
         ds_buf = None
-        pending_audio = np.zeros(0, dtype=np.float32)
         audio_embeds = None
         n_audio_samples_fed = 0
         n_total_decoded = 0
         first_cycle = True
         prefilled = False
 
-    print("Listening... (Ctrl+C to stop)\n", flush=True)
+    def encode_chunk(chunk):
+        nonlocal first_cycle, n_audio_samples_fed, audio_tail, conv1_tail
+        nonlocal conv2_tail, encoder_cache, ds_buf, audio_embeds
+        n_audio_samples_fed += len(chunk)
+        if first_cycle:
+            chunk = np.concatenate([
+                np.zeros(N_LEFT_PAD_TOKENS * SAMPLES_PER_TOKEN, dtype=np.float32),
+                chunk,
+            ])
+            first_cycle = False
+        mel, audio_tail = log_mel_spectrogram_step(chunk, audio_tail)
+        new_embeds, conv1_tail, conv2_tail, encoder_cache, ds_buf = model.encode_step(
+            mel, conv1_tail, conv2_tail, encoder_cache, ds_buf
+        )
+        if new_embeds is not None:
+            mx.eval(new_embeds)
+            audio_embeds = (new_embeds if audio_embeds is None
+                            else mx.concatenate([audio_embeds, new_embeds]))
 
+    def decode_available(flushing=False):
+        nonlocal cache, y, y_emitted, prefilled, audio_embeds, n_total_decoded
+        if audio_embeds is None:
+            return False
+        if not prefilled:
+            if audio_embeds.shape[0] < prefix_len:
+                return False
+            cache = [RotatingKVCache(sliding_window) for _ in range(n_layers)]
+            prefix_embeds = (text_embeds + audio_embeds[:prefix_len])[None, :, :]
+            logits = model.decode(prefix_embeds, t_cond, "causal", cache)
+            mx.eval(logits, *[x for c in cache for x in (c.keys, c.values)])
+            y, y_emitted = sample(logits), False
+            mx.async_eval(y)
+            audio_embeds = audio_embeds[prefix_len:]
+            n_total_decoded = prefix_len
+            prefilled = True
+
+        n_decodable = audio_embeds.shape[0]
+        if not flushing:
+            safe_total = N_LEFT_PAD_TOKENS + n_audio_samples_fed // SAMPLES_PER_TOKEN
+            n_decodable = min(n_decodable, safe_total - n_total_decoded)
+        # With nothing new to decode, this still shows the prefill's prediction.
+        n_consumed, hit_eos = decode_steps(audio_embeds, max(n_decodable, 0))
+        n_total_decoded += n_consumed
+        audio_embeds = (audio_embeds[n_consumed:]
+                        if audio_embeds.shape[0] > n_consumed else None)
+        if hit_eos:
+            # Pending raw audio has not been encoded yet; retain it across EOS.
+            reset_all_state()
+        return hit_eos
+
+    print("Listening... (Ctrl+C to stop)\n", flush=True)
     stream = sd.InputStream(
-        samplerate=16000,
-        channels=1,
-        dtype="float32",
-        blocksize=SAMPLES_PER_TOKEN,
-        callback=callback,
+        samplerate=16000, channels=1, dtype="float32",
+        blocksize=SAMPLES_PER_TOKEN, callback=callback,
     )
     stream.start()
-
     try:
         start_time = time.monotonic()
         warned_no_audio = False
         while True:
-            # Drain new audio from buffer (swap, not copy)
-            with lock:
-                new_audio = audio_buf
-                audio_buf = np.zeros(0, dtype=np.float32)
-
-            if len(new_audio) > 0:
-                pending_audio = np.append(pending_audio, new_audio)
-
-            if first_cycle and len(pending_audio) < SAMPLES_PER_TOKEN:
-                elapsed = time.monotonic() - start_time
-                if not warned_no_audio and elapsed > 2.0:
+            minimum = SAMPLES_PER_TOKEN if first_cycle else batch_samples
+            with condition:
+                # Check under the callback's lock, including data already pending:
+                # notifications before this wait cannot be lost.
+                ready = condition.wait_for(
+                    lambda: len(pending_audio) + len(audio_buf) >= minimum,
+                    timeout=0.25,
+                )
+                if ready:
+                    pending_audio = np.concatenate([pending_audio, audio_buf])
+                    audio_buf = np.zeros(0, dtype=np.float32)
+            if not ready:
+                if first_cycle and not warned_no_audio and time.monotonic() - start_time > 2.0:
                     warned_no_audio = True
                     print(
                         "Warning: No audio received. Check that your terminal app "
                         "has microphone permission in System Settings > Privacy & "
-                        "Security > Microphone.",
-                        flush=True,
+                        "Security > Microphone.", flush=True,
                     )
-                time.sleep(0.02)
                 continue
 
-            # Encode new audio if we have at least one token's worth
-            if first_cycle and len(pending_audio) >= SAMPLES_PER_TOKEN:
-                # First cycle: feed left-pad + all available audio
-                left_pad = np.zeros(
-                    N_LEFT_PAD_TOKENS * SAMPLES_PER_TOKEN, dtype=np.float32
-                )
-                n_feed = (
-                    (len(pending_audio) // SAMPLES_PER_TOKEN) * SAMPLES_PER_TOKEN
-                )
-                chunk = np.concatenate([left_pad, pending_audio[:n_feed]])
-                pending_audio = pending_audio[n_feed:]
-                n_audio_samples_fed += n_feed
-
-                mel, audio_tail = log_mel_spectrogram_step(chunk, audio_tail)
-                new_embeds, conv1_tail, conv2_tail, encoder_cache, ds_buf = (
-                    model.encode_step(
-                        mel, conv1_tail, conv2_tail, encoder_cache, ds_buf
-                    )
-                )
-                if new_embeds is not None:
-                    mx.eval(new_embeds)
-                    audio_embeds = new_embeds
-                first_cycle = False
-
-            elif not first_cycle and len(pending_audio) >= SAMPLES_PER_TOKEN:
-                # Subsequent cycles: feed only new token-aligned audio
-                n_feed = (
-                    (len(pending_audio) // SAMPLES_PER_TOKEN) * SAMPLES_PER_TOKEN
-                )
-                chunk = pending_audio[:n_feed]
-                pending_audio = pending_audio[n_feed:]
-                n_audio_samples_fed += n_feed
-
-                mel, audio_tail = log_mel_spectrogram_step(chunk, audio_tail)
-                new_embeds, conv1_tail, conv2_tail, encoder_cache, ds_buf = (
-                    model.encode_step(
-                        mel, conv1_tail, conv2_tail, encoder_cache, ds_buf
-                    )
-                )
-                if new_embeds is not None:
-                    mx.eval(new_embeds)
-                    if audio_embeds is not None:
-                        audio_embeds = mx.concatenate([audio_embeds, new_embeds])
-                    else:
-                        audio_embeds = new_embeds
-
-            if audio_embeds is None:
-                time.sleep(0.02)
-                continue
-
-            # How many undecoded embeddings are safe to decode
-            safe_total = (
-                N_LEFT_PAD_TOKENS + n_audio_samples_fed // SAMPLES_PER_TOKEN
-            )
-            n_decodable = min(
-                audio_embeds.shape[0], safe_total - n_total_decoded
-            )
-
-            if n_decodable <= 0:
-                time.sleep(0.02)
-                continue
-
-            if not prefilled:
-                # Need prefix_len total positions for prefill
-                if n_total_decoded + audio_embeds.shape[0] < prefix_len:
-                    time.sleep(0.02)
-                    continue
-
-                cache = [RotatingKVCache(sliding_window) for _ in range(n_layers)]
-
-                prefix_embeds = text_embeds + audio_embeds[:prefix_len]
-                prefix_embeds = prefix_embeds[None, :, :]
-
-                logits = model.decode(prefix_embeds, t_cond, "causal", cache)
-                mx.eval(logits, *[x for c in cache for x in (c.keys, c.values)])
-
-                y = sample(logits)
-                mx.async_eval(y)
-
-                # Trim consumed prefix
-                audio_embeds = audio_embeds[prefix_len:]
-                n_total_decoded = prefix_len
-                prefilled = True
-
-                # Recompute decodable after consuming prefix
-                n_decodable = min(
-                    audio_embeds.shape[0], safe_total - n_total_decoded
-                )
-
-            if n_decodable <= 0:
-                time.sleep(0.02)
-                continue
-
-            # Decode new positions
-            n_consumed, hit_eos = decode_steps(audio_embeds, n_decodable)
-            n_total_decoded += n_consumed
-
-            # Trim consumed embeddings
-            if audio_embeds.shape[0] > n_consumed:
-                audio_embeds = audio_embeds[n_consumed:]
-            else:
-                audio_embeds = None
-
-            if hit_eos:
-                reset_all_state()
-
-            time.sleep(0.02)
+            # Start after 80 ms; catch up in bounded batches without extra waiting.
+            n_tokens = 1 if first_cycle else min(len(pending_audio) // SAMPLES_PER_TOKEN, 4)
+            n_feed = n_tokens * SAMPLES_PER_TOKEN
+            chunk, pending_audio = pending_audio[:n_feed], pending_audio[n_feed:]
+            encode_chunk(chunk)
+            decode_available()
 
     except KeyboardInterrupt:
         pass
     finally:
         stream.stop()
         stream.close()
+        with condition:
+            pending_audio = np.concatenate([pending_audio, audio_buf])
+            audio_buf = np.zeros(0, dtype=np.float32)
 
-        # Final flush: feed remaining audio + right padding through incremental
-        # pipeline, then decode all remaining positions.
-        if cache is not None and y is not None:
-            with lock:
-                final_audio = audio_buf
-                audio_buf = np.zeros(0, dtype=np.float32)
+        # Flush even if interrupted before prefill or below the batch threshold.
+        if n_audio_samples_fed or len(pending_audio):
+            real_remaining = len(pending_audio)
+            alignment = (-real_remaining) % SAMPLES_PER_TOKEN
+            pending_audio = np.pad(pending_audio, (0, alignment +
+                (n_delay_tokens + N_FLUSH_PAD_TOKENS) * SAMPLES_PER_TOKEN))
+            while len(pending_audio):
+                n_feed = SAMPLES_PER_TOKEN if first_cycle else 4 * SAMPLES_PER_TOKEN
+                chunk, pending_audio = pending_audio[:n_feed], pending_audio[n_feed:]
+                real_remaining = max(0, real_remaining - len(chunk))
+                encode_chunk(chunk)
+                if decode_available(flushing=True) and not real_remaining:
+                    break
 
-            pending_audio = np.append(pending_audio, final_audio)
-            right_pad = np.zeros(
-                (n_delay_tokens + N_FLUSH_PAD_TOKENS) * SAMPLES_PER_TOKEN,
-                dtype=np.float32,
-            )
-            flush_chunk = np.concatenate([pending_audio, right_pad])
-            mel, audio_tail = log_mel_spectrogram_step(flush_chunk, audio_tail)
-            new_embeds, conv1_tail, conv2_tail, encoder_cache, ds_buf = (
-                model.encode_step(
-                    mel, conv1_tail, conv2_tail, encoder_cache, ds_buf
-                )
-            )
-            if new_embeds is not None:
-                mx.eval(new_embeds)
-                if audio_embeds is not None:
-                    audio_embeds = mx.concatenate([audio_embeds, new_embeds])
-                else:
-                    audio_embeds = new_embeds
-            if audio_embeds is not None:
-                decode_steps(audio_embeds, audio_embeds.shape[0])
-
-        # Flush last pending token
-        if y is not None:
+        if y is not None and not y_emitted:
             token_id = y.item()
             if token_id != eos_token_id:
-                text = sp.decode(
-                    [token_id], special_token_policy=SpecialTokenPolicy.IGNORE
-                )
-                emit(text)
+                emit(sp.decode([token_id], special_token_policy=SpecialTokenPolicy.IGNORE))
         emit("\n")
 
 
@@ -339,6 +281,8 @@ def main():
         default=0.0,
         help="Sampling temperature (0 = greedy)",
     )
+    parser.add_argument("--audio-batch-ms", type=int, choices=(80, 160, 320), default=80,
+                        help="Minimum live audio batch (larger batches add buffering latency)")
     args = parser.parse_args()
 
     stream_transcribe(
@@ -346,4 +290,5 @@ def main():
         temperature=args.temp,
         context_size=args.context_size,
         delay_ms=args.delay_ms,
+        audio_batch_ms=args.audio_batch_ms,
     )

@@ -6,6 +6,9 @@ __pycache__/
 # vim
 *.swp
 
+# Local session metadata
+/:memory:.ses
+
 # C extensions
 *.so
 

@@ -1,5 +1,13 @@
-"""Local French-to-English translation, independent of the MLX decoding loop."""
+"""Local French-to-English translation, independent of the MLX decoding loop.
 
+English streams like a simultaneous interpreter's. After each completed French
+word, the open sentence is translated again, continuing from the English already
+shown; new words appear once two consecutive translations agree (local
+agreement). Shown words are never revised. A sentence is completed when it ends,
+pauses, grows too long, or the stream stops.
+"""
+
+import math
 import os
 from queue import Empty, Queue
 import re
@@ -7,21 +15,56 @@ import sys
 from threading import Thread
 import time
 
+SENTENCE_END = re.compile(r'[.!?…]["»”]*\s|\n')
+MAX_SENTENCE_CHARS = 240
+_WORDS = re.compile(r"\s*\S+")
 
-def load_french_english():
+
+class FrenchEnglish:
+    """Argos French-to-English model that can continue English already shown."""
+
+    def __init__(self, package, settings):
+        import ctranslate2
+
+        # Source and target share this SentencePiece model, so shown English re-encodes exactly.
+        self.tokenizer = package.tokenizer
+        self.beam_size = settings.beam_size
+        self.translator = ctranslate2.Translator(
+            str(package.package_path / "model"), device=settings.device,
+            inter_threads=settings.inter_threads, intra_threads=settings.intra_threads,
+            compute_type=settings.compute_type,
+        )
+
+    def __call__(self, text, prefix=""):
+        """Translate text into English that starts with prefix."""
+        if not text.strip():
+            return ""
+        result = self.translator.translate_batch(
+            [self.tokenizer.encode(text)],
+            target_prefix=[self.tokenizer.encode(prefix)] if prefix else None,
+            # Argos's settings for a single translation.
+            beam_size=self.beam_size, length_penalty=0.2, replace_unknowns=True,
+        )
+        return self.tokenizer.decode(result[0].hypotheses[0]).lstrip()
+
+
+def load_french_english(*, allow_download=True, warmup=True):
     # Keep this feature local even if Argos has a remote provider configured.
     os.environ["ARGOS_MODEL_PROVIDER"] = "OPENNMT"
     os.environ["ARGOS_DEVICE_TYPE"] = "cpu"
-    # Stanza refreshes its remote index on startup, even with cached weights.
-    os.environ["ARGOS_CHUNK_TYPE"] = "MINISBD"
     os.environ.setdefault("ARGOS_INTRA_THREADS", "2")
     try:
-        from argostranslate import package, translate
+        from argostranslate import package, settings
     except ImportError as exc:
         raise RuntimeError("Install translation support with uv sync --extra translation --no-editable") from exc
 
-    if not any(p.from_code == "fr" and p.to_code == "en"
-               for p in package.get_installed_packages()):
+    def installed():
+        return next((p for p in package.get_installed_packages()
+                     if p.from_code == "fr" and p.to_code == "en"), None)
+
+    if installed() is None:
+        if not allow_download:
+            raise RuntimeError("Cached French-to-English Argos model is required; run --translate-en once online")
         print("Downloading the local French → English translation model...", file=sys.stderr, flush=True)
         package.update_package_index()
         model = next((p for p in package.get_available_packages()
@@ -30,19 +73,64 @@ def load_french_english():
             raise RuntimeError("No French-to-English model available in the Argos package index")
         package.install_from_path(model.download())
 
-    translator = translate.get_translation_from_codes("fr", "en")
-    # Warm up before microphone capture; also fetch any sentence-splitting assets.
-    translator.translate("Bonjour.")
-    print("Local French → English translation ready.", file=sys.stderr, flush=True)
-    return translator.translate
+    translate = FrenchEnglish(installed(), settings)
+    # Warm up before microphone capture.
+    if warmup:
+        translate("Bonjour.")
+        print("Local French → English translation ready.", file=sys.stderr, flush=True)
+    return translate
+
+
+class _Pending:
+    """French text with per-character arrival times, retained across sentence splits."""
+    def __init__(self, idle):
+        self.text = ""
+        self.arrivals = []
+        self.idle = idle
+
+    def append(self, text, arrived):
+        self.text += text
+        self.arrivals.extend([arrived] * len(text))
+
+    def deadline(self):
+        return self.arrivals[-1] + self.idle if self.text else None
+
+    def complete(self):
+        """French up to the last whole word; the word still arriving may change."""
+        return self.text[:self.text.rfind(" ") + 1].strip()
+
+    def ready(self, now):
+        """Return (cut, reason, ready_at) once the open sentence should be completed."""
+        if not self.text:
+            return None
+        if match := SENTENCE_END.search(self.text):
+            return match.end(), "sentence", self.arrivals[match.end() - 1]
+        # Cut at the last whole word: shown English may already cover every earlier word.
+        cut = self.text.rfind(" ")
+        if len(self.text) >= MAX_SENTENCE_CHARS and cut > 0:
+            return cut + 1, "length", self.arrivals[-1]
+        idle = self.arrivals[-1] + self.idle
+        if idle <= now:
+            return len(self.text), "idle", idle
+        return None
+
+    def take(self, cut):
+        text, arrivals = self.text[:cut], self.arrivals[:cut]
+        self.text, self.arrivals = self.text[cut:], self.arrivals[cut:]
+        return text, arrivals
 
 
 class LiveTranslation:
-    def __init__(self, translate, idle_seconds=1.5, max_seconds=5.0):
+    """Stream English to stdout; optionally save French and English pairs to record."""
+
+    def __init__(self, translate, idle_seconds=1.5, *, record=None, on_timing=None):
+        if not math.isfinite(idle_seconds) or idle_seconds <= 0:
+            raise ValueError("Translation pause must be positive and finite")
         self.translate = translate
         self.idle_seconds = idle_seconds
-        self.max_seconds = max_seconds
-        # ponytail: preserve all text in memory if translation falls behind;
+        self.record = record
+        self.on_timing = on_timing
+        # Preserve all text in memory if translation falls behind;
         # use a disk-backed queue if sustained translation backlog becomes a problem.
         self.queue = Queue()
         self.error = None
@@ -54,51 +142,119 @@ class LiveTranslation:
 
     def write(self, text):
         if text:
-            self.queue.put(text)
+            self.queue.put((text, time.monotonic()))
 
     def __exit__(self, exc_type, exc, traceback):
-        self.queue.put(None)
+        self.queue.put((None, time.monotonic()))
         self.thread.join()
         if self.error is not None and exc_type is None:
-            raise RuntimeError("Translation failed; the French text was preserved above") from self.error
+            raise RuntimeError("Translation failed; the French text was shown in its place") from self.error
 
-    def _emit(self, text):
-        text = text.strip()
-        if not text:
-            return
-        print(f"FR: {text}", flush=True)
+    def _start_sentence(self):
+        self.shown = ""       # English on screen for the open sentence
+        self.previous = None  # latest partial translation, awaiting agreement
+        self.translated = ""  # French it translated
+        self.timing = dict(calls=0, inference_seconds=0.0, first_english=None, error=None)
+
+    def _show(self, text, english=True):
+        print(text, end="", flush=True)
+        if english and self.timing["first_english"] is None:
+            self.timing["first_english"] = time.monotonic()
+
+    def _translate(self, source):
+        start = time.monotonic()
         try:
-            print(f"EN: {self.translate(text)}\n", flush=True)
+            return self.translate(source, self.shown)
         except Exception as exc:
             self.error = exc
-            print("EN: [Translation unavailable; French text preserved]\n", flush=True)
+            self.timing["error"] = str(exc)
             print(f"Translation error: {exc}", file=sys.stderr, flush=True)
+            return None
+        finally:
+            end = time.monotonic()
+            self.timing["calls"] += 1
+            self.timing["inference_seconds"] += end - start
+            self.timing.update(inference_start=start, inference_end=end)
+
+    def _agree(self, source):
+        """Show the English on which the last two translations of the open sentence agree."""
+        if not source or source == self.translated or self.timing["error"]:
+            return
+        self.translated = source
+        english = self._translate(source)
+        if english is None:
+            return
+        # A translated partial sentence gains closing punctuation; that is not agreement.
+        english = re.sub(r"[.!?…]+$", "", english.rstrip())
+        if self.previous is not None:
+            agreed = ""
+            for ours, theirs in zip(_WORDS.findall(self.previous), _WORDS.findall(english)):
+                if ours != theirs:
+                    break
+                agreed += ours
+            if len(agreed) > len(self.shown) and agreed.startswith(self.shown):
+                self._show(agreed[len(self.shown):])
+                self.shown = agreed
+        self.previous = english
+
+    def _complete(self, pending, cut, reason, ready_at):
+        text, arrivals = pending.take(cut)
+        source = text.strip()
+        if source:
+            english = None if self.timing["error"] else self._translate(source)
+            if english is None:
+                self._show(("\n" if self.shown else "") + f"[Translation unavailable] {source}\n", english=False)
+            elif english.startswith(self.shown):
+                self._show(english[len(self.shown):] + "\n")
+            else:  # Not expected with a forced prefix; repeat the sentence rather than garble it.
+                self._show(f"\n{english}\n")
+            if self.record is not None:
+                saved = english if english is not None else "[Translation unavailable; French text preserved]"
+                try:
+                    self.record.write(f"FR: {source}\nEN: {saved}\n\n")
+                    self.record.flush()
+                except OSError as exc:
+                    self.error = exc
+                    print(f"Transcript write error: {exc}", file=sys.stderr, flush=True)
+            self.phrase_id += 1
+            self.timing.update(phrase_id=self.phrase_id, source_chars=len(text), source=source,
+                               english=english, first_arrival=arrivals[0], last_arrival=arrivals[-1],
+                               ready_at=ready_at, reason=reason, output_end=time.monotonic())
+            if self.on_timing is not None:
+                try:
+                    self.on_timing(self.timing)
+                except Exception as exc:
+                    # Instrumentation must not terminate the worker and lose source text.
+                    self.error = exc
+                    print(f"Translation timing callback error: {exc}", file=sys.stderr, flush=True)
+        self._start_sentence()
 
     def _run(self):
-        pending = ""
-        started = time.monotonic()
+        pending = _Pending(self.idle_seconds)
+        self.phrase_id = 0
+        self._start_sentence()
+
+        def flush_ready(now):
+            while ready := pending.ready(now):
+                self._complete(pending, *ready)
+
         while True:
+            deadline = pending.deadline()
+            timeout = None if deadline is None else max(0, deadline - time.monotonic())
             try:
-                text = self.queue.get(timeout=self.idle_seconds)
+                text, arrived = self.queue.get(timeout=timeout)
             except Empty:
-                self._emit(pending)
-                pending = ""
+                flush_ready(time.monotonic())
                 continue
+            # Replay source time before wall time: queued fragments that arrived
+            # before a deadline belong to that sentence even when inference is slow.
+            flush_ready(arrived)
             if text is None:
-                self._emit(pending)
+                if pending.text:
+                    self._complete(pending, len(pending.text), "shutdown", arrived)
                 return
-            if not pending:
-                started = time.monotonic()
-            pending += text
-            # Sentence boundaries, including the final newline from Voxtral.
-            while match := re.search(r'[.!?…]["»”]*\s|\n', pending):
-                self._emit(pending[:match.end()])
-                pending = pending[match.end():]
-                started = time.monotonic()
-            # Keep long, unpunctuated speech live, splitting at a word boundary.
-            if len(pending) >= 240 or time.monotonic() - started >= self.max_seconds:
-                cut = pending.rfind(" ")
-                if cut > 0:
-                    self._emit(pending[:cut])
-                    pending = pending[cut + 1:]
-                    started = time.monotonic()
+            pending.append(text, arrived)
+            flush_ready(arrived)
+            # Retranslate only when caught up, so a slow model skips intermediate words.
+            if self.queue.empty():
+                self._agree(pending.complete())
