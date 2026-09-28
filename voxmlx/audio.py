@@ -8,6 +8,7 @@ HOP_LENGTH = 160
 N_MELS = 128
 GLOBAL_LOG_MEL_MAX = 1.5
 SAMPLES_PER_TOKEN = HOP_LENGTH * 2 * 4  # hop * conv_stride * downsample = 1280
+N_FLUSH_PAD_TOKENS = 11  # Right padding beyond the transcription delay, to flush the last words.
 
 
 def load_audio(path: str) -> np.ndarray:

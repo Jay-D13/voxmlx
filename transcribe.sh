@@ -16,7 +16,7 @@ for arg in "$@"; do
         --help|-h)
             printf '%s\n' \
                 'Usage: ./transcribe.sh [--quality] [--translate-en] [voxmlx options]' \
-                'Default: 6-bit model, 512-token context, 480 ms delay.' \
+                'Default: 6-bit model, 512-token context, 480 ms delay (2400 ms with --audio).' \
                 'Quality: 8-bit model, 1024-token context, 2400 ms delay (M5 Max / 48 GB).' \
                 '--translate-en: local French-to-English translation; shows English live, saves both.' \
                 'Shorter end-of-sentence pause: --translation-idle-ms 750 (default: 1500).' \
