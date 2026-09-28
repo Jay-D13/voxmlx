@@ -1,14 +1,16 @@
 from contextlib import redirect_stderr, redirect_stdout
-from io import StringIO
+import hashlib
+from io import BytesIO, StringIO
 from pathlib import Path
 import tempfile
 from threading import Event
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+import zipfile
 
 from voxmlx import main
-from voxmlx.translation import FrenchEnglish, LiveTranslation
+from voxmlx.translation import FrenchEnglish, LiveTranslation, _download
 
 WORDS = {"Bonjour.": "Hello.", "Bonjour": "Hello", "Comment": "How", "allez-vous": "are you"}
 
@@ -105,6 +107,30 @@ class TranslationTests(unittest.TestCase):
         self.assertIsNone(calls[1][1]["target_prefix"])
         self.assertEqual(model("  "), "")
         self.assertEqual(len(calls), 2)
+
+    def test_download_installs_only_a_verified_model(self):
+        archive = BytesIO()
+        with zipfile.ZipFile(archive, "w") as zf:
+            zf.writestr("translate-fr_en-1_9/model/model.bin", b"weights")
+            zf.writestr("translate-fr_en-1_9/sentencepiece.model", b"pieces")
+        requests = []
+
+        def urlopen(request, timeout):
+            requests.append(request)
+            return BytesIO(archive.getvalue())
+
+        with tempfile.TemporaryDirectory() as directory, redirect_stderr(StringIO()), \
+             patch("voxmlx.translation.urllib.request.urlopen", side_effect=urlopen):
+            target = Path(directory) / "translate-fr_en-1_9"
+            with self.assertRaisesRegex(RuntimeError, "Checksum mismatch"):
+                _download(target)
+            self.assertEqual(list(Path(directory).iterdir()), [])
+            with patch("voxmlx.translation.MODEL_SHA256", hashlib.sha256(archive.getvalue()).hexdigest()):
+                _download(target)
+            self.assertEqual((target / "model" / "model.bin").read_bytes(), b"weights")
+            self.assertEqual([p.name for p in Path(directory).iterdir()], [target.name])
+        # argos-net.com rejects urllib's default User-Agent.
+        self.assertEqual(requests[0].get_header("User-agent"), "voxmlx")
 
 
 if __name__ == "__main__":
