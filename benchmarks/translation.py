@@ -78,21 +78,18 @@ def phrase_metrics(events):
 
 
 def worker(args):
-    # Match the launcher's cache locations, while respecting explicit locations.
-    os.environ.setdefault('XDG_DATA_HOME', str(ROOT / '.cache/data'))
-    os.environ.setdefault('XDG_CACHE_HOME', str(ROOT / '.cache'))
-    os.environ.setdefault('XDG_CONFIG_HOME', str(ROOT / '.cache/config'))
-    os.environ['ARGOS_INTRA_THREADS'] = str(args.threads)
-    os.environ['ARGOS_BEAM_SIZE'] = str(args.beam)
+    # Match the launcher's cache location, while respecting an explicit one.
+    os.environ.setdefault('VOXMLX_CACHE_DIR', str(ROOT / '.cache/voxmlx'))
     sys.path.insert(0, str(ROOT))
-    from voxmlx.translation import LiveTranslation, load_french_english
+    from voxmlx.translation import LiveTranslation, load_french_english, model_dir
     tick = time.monotonic()
     if args.variant == 'asr-only':
         translate = None
         load_ms = warmup_ms = 0
     else:
         # Loading creates the CTranslate2 model; time the first phrase separately.
-        translate = load_french_english(allow_download=False, warmup=False)
+        translate = load_french_english(allow_download=False, warmup=False,
+                                        threads=args.threads, beam_size=args.beam)
         load_ms = (time.monotonic() - tick) * 1000
         tick = time.monotonic()
         translate('Bonjour, ceci est un exercice de préparation.')
@@ -222,8 +219,7 @@ def worker(args):
     ended = time.monotonic()
     if args.mode != 'inference' and args.variant != 'asr-only' and outstanding.strip():
         failure = failure or 'Replay finished with unemitted source text'
-    from argostranslate import package, settings
-    installed = next((p for p in package.get_installed_packages() if p.from_code == 'fr' and p.to_code == 'en'), None)
+    metadata = model_dir() / 'metadata.json'
     effective_compute_type = getattr(getattr(translate, 'translator', None), 'compute_type', None)
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     # Darwin reports bytes; Linux reports KiB.
@@ -237,9 +233,9 @@ def worker(args):
                   phrases=len(events), translation_calls=len(calls), failure=failure, peak_rss_bytes=rss_bytes,
                   metrics=phrase_metrics(events), events=events,
                   hardware=platform.machine(), os=platform.platform(), python=platform.python_version(),
-                  versions={p: importlib.metadata.version(p) for p in ('argostranslate', 'ctranslate2', 'minisbd', 'mlx')},
-                  translation_model=json.loads((installed.package_path / 'metadata.json').read_text()) if installed else None,
-                  compute_type=settings.compute_type, effective_compute_type=effective_compute_type,
+                  versions={p: importlib.metadata.version(p) for p in ('ctranslate2', 'sentencepiece', 'mlx')},
+                  translation_model=json.loads(metadata.read_text()) if metadata.exists() else None,
+                  effective_compute_type=effective_compute_type,
                   input_sha256=hashlib.sha256(Path(args.audio).read_bytes() if args.mode == 'audio' else
                                             json.dumps(phrases if args.mode == 'inference' else rows, sort_keys=True).encode()).hexdigest())
     if sys.platform == 'darwin':

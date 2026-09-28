@@ -7,32 +7,64 @@ agreement). Shown words are never revised. A sentence is completed when it ends,
 pauses, grows too long, or the stream stops.
 """
 
+import hashlib
 import math
 import os
+from pathlib import Path
 from queue import Empty, Queue
 import re
 import sys
+import tempfile
 from threading import Thread
 import time
+import urllib.request
+import zipfile
 
 SENTENCE_END = re.compile(r'[.!?…]["»”]*\s|\n')
 MAX_SENTENCE_CHARS = 240
 _WORDS = re.compile(r"\s*\S+")
 
+# Argos Translate's French-to-English package, pinned so translations are reproducible.
+MODEL_NAME = "translate-fr_en-1_9"
+MODEL_URL = f"https://argos-net.com/v1/{MODEL_NAME}.argosmodel"
+MODEL_SHA256 = "3b3052fee6bb1e8e8e632a26a723eb2a2c7710dfe73ba61ffd9b83e85d4f14c1"
+
+
+def model_dir():
+    """Model location: $VOXMLX_CACHE_DIR, else ~/.cache/voxmlx (respecting $XDG_CACHE_HOME)."""
+    cache = os.environ.get("VOXMLX_CACHE_DIR") or (
+        Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "voxmlx")
+    return Path(cache) / MODEL_NAME
+
+
+class _Tokenizer:
+    """SentencePiece, decoded exactly as Argos does so translations are unchanged."""
+
+    def __init__(self, path):
+        import sentencepiece
+
+        self.processor = sentencepiece.SentencePieceProcessor(model_file=str(path))
+
+    def encode(self, text):
+        return self.processor.encode(text, out_type=str)
+
+    def decode(self, pieces):
+        return self.processor.decode_pieces(pieces).replace("▁", " ").replace("_", " ")
+
 
 class FrenchEnglish:
     """Argos French-to-English model that can continue English already shown."""
 
-    def __init__(self, package, settings):
+    def __init__(self, path, *, threads=2, beam_size=4):
         import ctranslate2
 
         # Source and target share this SentencePiece model, so shown English re-encodes exactly.
-        self.tokenizer = package.tokenizer
-        self.beam_size = settings.beam_size
+        self.tokenizer = _Tokenizer(path / "sentencepiece.model")
+        self.beam_size = beam_size
+        # Argos's defaults, except two CPU threads.
         self.translator = ctranslate2.Translator(
-            str(package.package_path / "model"), device=settings.device,
-            inter_threads=settings.inter_threads, intra_threads=settings.intra_threads,
-            compute_type=settings.compute_type,
+            str(path / "model"), device="cpu", inter_threads=1, intra_threads=threads,
+            compute_type="auto",
         )
 
     def __call__(self, text, prefix=""):
@@ -48,32 +80,38 @@ class FrenchEnglish:
         return self.tokenizer.decode(result[0].hypotheses[0]).lstrip()
 
 
-def load_french_english(*, allow_download=True, warmup=True):
-    # Keep this feature local even if Argos has a remote provider configured.
-    os.environ["ARGOS_MODEL_PROVIDER"] = "OPENNMT"
-    os.environ["ARGOS_DEVICE_TYPE"] = "cpu"
-    os.environ.setdefault("ARGOS_INTRA_THREADS", "2")
+def _download(target):
+    """Download, verify, and unpack the model; target appears only once complete."""
+    print("Downloading the local French → English translation model...", file=sys.stderr, flush=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=target.parent) as tmp:
+        archive, digest = Path(tmp) / "model.zip", hashlib.sha256()
+        # argos-net.com rejects urllib's default User-Agent.
+        request = urllib.request.Request(MODEL_URL, headers={"User-Agent": "voxmlx"})
+        with urllib.request.urlopen(request, timeout=60) as response, archive.open("wb") as file:
+            while chunk := response.read(1 << 20):
+                digest.update(chunk)
+                file.write(chunk)
+        if digest.hexdigest() != MODEL_SHA256:
+            raise RuntimeError(f"Checksum mismatch for {MODEL_URL}; the model was not installed")
+        with zipfile.ZipFile(archive) as zf:
+            zf.extractall(tmp)
+        (Path(tmp) / MODEL_NAME).rename(target)
+
+
+def load_french_english(*, allow_download=True, warmup=True, threads=2, beam_size=4):
     try:
-        from argostranslate import package, settings
+        import ctranslate2  # Checked before any download.
     except ImportError as exc:
         raise RuntimeError("Install translation support with uv sync --extra translation --no-editable") from exc
 
-    def installed():
-        return next((p for p in package.get_installed_packages()
-                     if p.from_code == "fr" and p.to_code == "en"), None)
-
-    if installed() is None:
+    path = model_dir()
+    if not (path / "model").is_dir():
         if not allow_download:
-            raise RuntimeError("Cached French-to-English Argos model is required; run --translate-en once online")
-        print("Downloading the local French → English translation model...", file=sys.stderr, flush=True)
-        package.update_package_index()
-        model = next((p for p in package.get_available_packages()
-                      if p.from_code == "fr" and p.to_code == "en"), None)
-        if model is None:
-            raise RuntimeError("No French-to-English model available in the Argos package index")
-        package.install_from_path(model.download())
+            raise RuntimeError(f"Cached French-to-English model is required in {path}; run --translate-en once online")
+        _download(path)
 
-    translate = FrenchEnglish(installed(), settings)
+    translate = FrenchEnglish(path, threads=threads, beam_size=beam_size)
     # Warm up before microphone capture.
     if warmup:
         translate("Bonjour.")

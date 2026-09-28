@@ -90,11 +90,13 @@ script usage without loading a model.
 ./transcribe.sh --quality --translate-en
 ```
 
-The script installs the optional translation dependencies through `uv`. Before
-opening the microphone, it downloads and prepares the French-to-English
-[Argos Translate](https://github.com/argosopentech/argos-translate) model if
-needed. Downloads are required on first use; speech and text are processed
-locally, with translation on the CPU. Cached models work offline afterward.
+The script installs the optional translation dependency (CTranslate2) through
+`uv`. Before opening the microphone, it downloads the French-to-English
+[Argos Translate](https://github.com/argosopentech/argos-translate) model
+(67 MB, checksum-verified) if needed. Downloads are required on first use;
+speech and text are processed locally, with translation on the CPU. Cached
+models work offline afterward. The script keeps the model in `.cache/voxmlx`;
+direct CLI use defaults to `~/.cache/voxmlx`, or set `VOXMLX_CACHE_DIR`.
 
 The terminal shows English only, word by word, like a simultaneous interpreter:
 after each French word, the open sentence is translated again, and English words

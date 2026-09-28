@@ -12,10 +12,14 @@ class TranscribeScriptTests(unittest.TestCase):
             root = Path(directory)
             shutil.copy(Path(__file__).resolve().parents[1] / "transcribe.sh", root)
             uv = root / "uv"
-            uv.write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$ARGS_FILE"\nprintf "Test transcript.\\n"\n')
+            uv.write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$ARGS_FILE"\n'
+                          'printf "%s\\n" "${XDG_CACHE_HOME-unset}" "${XDG_DATA_HOME-unset}" "$VOXMLX_CACHE_DIR" > "$ENV_FILE"\n'
+                          'printf "Test transcript.\\n"\n')
             uv.chmod(0o755)
-            env = {**os.environ, "PATH": f"{root}:" + os.environ["PATH"],
-                   "ARGS_FILE": str(root / "args")}
+            inherited = {k: v for k, v in os.environ.items()
+                         if k not in ("XDG_CACHE_HOME", "XDG_DATA_HOME", "VOXMLX_CACHE_DIR")}
+            env = {**inherited, "PATH": f"{root}:" + os.environ["PATH"],
+                   "ARGS_FILE": str(root / "args"), "ENV_FILE": str(root / "env")}
             for args, expected in (
                 ([], ["--context-size", "512"]),
                 (["--audio-batch-ms", "160"], ["--context-size", "512", "--audio-batch-ms", "160"]),
@@ -39,6 +43,10 @@ class TranscribeScriptTests(unittest.TestCase):
                                             env=env, capture_output=True, text=True, check=True)
                     actual = (root / "args").read_text().splitlines()
                     self.assertIn("Test transcript.\n", result.stdout)
+                    xdg_cache, xdg_data, cache = (root / "env").read_text().splitlines()
+                    # Only voxmlx's cache moves into the project; uv keeps its own cache and Pythons.
+                    self.assertEqual((xdg_cache, xdg_data), ("unset", "unset"))
+                    self.assertEqual(Path(cache).resolve(), (root / ".cache/voxmlx").resolve())
                     if "--translate-en" in args:
                         # English goes to the terminal; voxmlx saves both languages itself.
                         self.assertEqual(actual[:-2], ["run", "--python", "3.12", "--no-editable",

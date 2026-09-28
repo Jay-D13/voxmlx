@@ -157,15 +157,17 @@ class SchedulingTests(unittest.TestCase):
                 LiveTranslation(str, idle_seconds=timeout)
 
     def test_offline_loader_requires_cached_model_without_downloading(self):
-        package = SimpleNamespace(get_installed_packages=Mock(return_value=[]), update_package_index=Mock())
-        modules = {'argostranslate': SimpleNamespace(package=package, settings=SimpleNamespace())}
-        with patch.dict('sys.modules', modules), patch('voxmlx.translation.FrenchEnglish') as model:
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.dict('os.environ', {'VOXMLX_CACHE_DIR': directory}), \
+             patch.dict('sys.modules', {'ctranslate2': SimpleNamespace()}), \
+             patch('voxmlx.translation.urllib.request.urlopen') as urlopen, \
+             patch('voxmlx.translation.FrenchEnglish') as model:
             with self.assertRaisesRegex(RuntimeError, 'Cached French-to-English'):
                 load_french_english(allow_download=False)
-            package.get_installed_packages.return_value = [SimpleNamespace(from_code='fr', to_code='en')]
+            (Path(directory) / 'translate-fr_en-1_9' / 'model').mkdir(parents=True)
             self.assertIs(load_french_english(allow_download=False, warmup=False), model.return_value)
             model.return_value.assert_not_called()
-        package.update_package_index.assert_not_called()
+        urlopen.assert_not_called()
 
     def test_timing_callback_failure_still_drains_text(self):
         chunks = []

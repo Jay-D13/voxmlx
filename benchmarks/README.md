@@ -178,8 +178,8 @@ sentence splitter or paragraph cache.
 Run from the repository root, with translation dependencies installed and the
 French-to-English Argos model already cached. Normal `./transcribe.sh --translate-en`
 downloads it on first use. Benchmarks never download it and report a missing
-model as an error. They use the launcher's cache locations, respecting explicit
-`XDG_*` environment overrides.
+model as an error. They use the launcher's cache location, `.cache/voxmlx`,
+respecting an explicit `VOXMLX_CACHE_DIR`.
 
 ```bash
 # Fixed complete phrases, one model call each.

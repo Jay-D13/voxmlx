@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-translation = ["argostranslate>=1.11,<2"]
+translation = ["ctranslate2>=4,<5"]
 
 [tool.setuptools]
 packages = ["voxmlx"]

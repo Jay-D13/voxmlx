@@ -32,12 +32,8 @@ done
 
 cd "$(dirname "$0")"
 export HF_HOME="${HF_HOME:-$PWD/.cache/huggingface}"
+export VOXMLX_CACHE_DIR="${VOXMLX_CACHE_DIR:-$PWD/.cache/voxmlx}"
 export PYTHONUNBUFFERED=1
-if [[ ${#uv_options[@]} -gt 0 ]]; then
-    export XDG_DATA_HOME="${XDG_DATA_HOME:-$PWD/.cache/data}"
-    export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$PWD/.cache}"
-    export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$PWD/.cache/config}"
-fi
 mkdir -p transcripts
 transcript="$PWD/transcripts/room-$(date +%Y%m%d-%H%M%S).txt"
 printf 'Saving live transcript to: %s\nPress Ctrl+C to stop.\n\n' "$transcript"
