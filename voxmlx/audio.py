@@ -1,5 +1,3 @@
-import math
-
 import mlx.core as mx
 import numpy as np
 import soundfile as sf
@@ -91,6 +89,8 @@ def mel_filter_bank(
 
 
 _MEL_FILTERS = None
+_HANN_WINDOW = None
+_FRAME_INDEX_T = None
 
 
 def _get_mel_filters() -> mx.array:
@@ -100,12 +100,25 @@ def _get_mel_filters() -> mx.array:
     return _MEL_FILTERS
 
 
+def _get_hann_window() -> mx.array:
+    global _HANN_WINDOW
+    if _HANN_WINDOW is None:
+        _HANN_WINDOW = mx.array(np.hanning(N_FFT + 1)[:-1].astype(np.float32))
+    return _HANN_WINDOW
+
+
+def _get_frame_index_t() -> mx.array:
+    global _FRAME_INDEX_T
+    if _FRAME_INDEX_T is None:
+        _FRAME_INDEX_T = mx.arange(N_FFT)[None, :]  # [1, N_FFT]
+    return _FRAME_INDEX_T
+
+
 def log_mel_spectrogram(audio: np.ndarray) -> mx.array:
     audio_mx = mx.array(audio)
 
-    # STFT via manual DFT
-    window = mx.array(np.hanning(N_FFT + 1)[:-1].astype(np.float32))
-    n_freqs = N_FFT // 2 + 1
+    # STFT
+    window = _get_hann_window()
 
     # Pad audio so we get the same number of frames as torch.stft
     pad_len = N_FFT // 2
@@ -114,23 +127,16 @@ def log_mel_spectrogram(audio: np.ndarray) -> mx.array:
     # Frame the signal
     n_frames = 1 + (audio_mx.shape[0] - N_FFT) // HOP_LENGTH
     # Build frame indices
-    t = mx.arange(N_FFT)[None, :]  # [1, N_FFT]
+    t = _get_frame_index_t()  # [1, N_FFT]
     starts = (mx.arange(n_frames) * HOP_LENGTH)[:, None]  # [n_frames, 1]
     indices = starts + t  # [n_frames, N_FFT]
     frames = audio_mx[indices] * window[None, :]  # [n_frames, N_FFT]
 
-    # DFT
-    k = mx.arange(n_freqs).astype(mx.float32)[:, None]  # [n_freqs, 1]
-    n = mx.arange(N_FFT).astype(mx.float32)[None, :]  # [1, N_FFT]
-    angles = -2.0 * math.pi * (k @ n) / N_FFT  # [n_freqs, N_FFT]
-    dft_real = mx.cos(angles)
-    dft_imag = mx.sin(angles)
-    # Real DFT: compute real and imaginary parts separately
-    spec_real = frames @ dft_real.T  # [n_frames, n_freqs]
-    spec_imag = frames @ dft_imag.T  # [n_frames, n_freqs]
+    # FFT
+    spec = mx.fft.rfft(frames[:-1])  # drop last frame to match torch.stft(...)[..., :-1]
 
-    # Power spectrum, drop last frame to match torch.stft(...)[..., :-1]
-    magnitudes = (spec_real[:-1] ** 2 + spec_imag[:-1] ** 2)  # [n_frames-1, n_freqs]
+    # Power spectrum
+    magnitudes = spec.real ** 2 + spec.imag ** 2  # [n_frames-1, n_freqs]
 
     # Mel filterbank
     mel_filters = _get_mel_filters()  # [n_mels, n_freqs]
@@ -176,8 +182,7 @@ def log_mel_spectrogram_step(
     audio_mx = mx.array(combined)
 
     # STFT
-    window = mx.array(np.hanning(N_FFT + 1)[:-1].astype(np.float32))
-    n_freqs = N_FFT // 2 + 1
+    window = _get_hann_window()
 
     # Frame the signal (no right padding — we just produce fewer trailing frames)
     n_frames = 1 + (audio_mx.shape[0] - N_FFT) // HOP_LENGTH
@@ -185,22 +190,16 @@ def log_mel_spectrogram_step(
         # Not enough data for even one frame
         return mx.zeros((N_MELS, 0)), new_tail
 
-    t = mx.arange(N_FFT)[None, :]
+    t = _get_frame_index_t()
     starts = (mx.arange(n_frames) * HOP_LENGTH)[:, None]
     indices = starts + t
     frames = audio_mx[indices] * window[None, :]
 
-    # DFT
-    k = mx.arange(n_freqs).astype(mx.float32)[:, None]
-    n = mx.arange(N_FFT).astype(mx.float32)[None, :]
-    angles = -2.0 * math.pi * (k @ n) / N_FFT
-    dft_real = mx.cos(angles)
-    dft_imag = mx.sin(angles)
-    spec_real = frames @ dft_real.T
-    spec_imag = frames @ dft_imag.T
+    # FFT
+    spec = mx.fft.rfft(frames)
 
     # Power spectrum (no [:-1] frame drop — incremental produces exact frames)
-    magnitudes = spec_real ** 2 + spec_imag ** 2
+    magnitudes = spec.real ** 2 + spec.imag ** 2
 
     # Mel filterbank
     mel_filters = _get_mel_filters()

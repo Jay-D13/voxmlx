@@ -1,0 +1,1338 @@
+{
+  "date": "2026-09-22",
+  "hardware": "Apple M5",
+  "memory_gib": 24,
+  "os": "macOS-27.0-arm64-arm-64bit",
+  "os_build": "26A428",
+  "python": "3.12.11",
+  "versions": {
+    "argostranslate": "1.11.0",
+    "ctranslate2": "4.8.2",
+    "minisbd": "0.9.5",
+    "mlx": "0.32.2"
+  },
+  "translation_model": {
+    "package_version": "1.9",
+    "argos_version": "1.9.0",
+    "from_code": "fr",
+    "from_name": "French",
+    "to_code": "en",
+    "to_name": "English"
+  },
+  "effective_compute_type": "int8_float32",
+  "baseline": "cb44b5a524ac9ce730bdb0ed6eb55705f66b852f",
+  "candidate_sha256": "5917e501dadf71abba1b3b317b9506bd042e4bceb8428c73c9f660c678a6bce5",
+  "repeats": 3,
+  "audio_source": "macOS Thomas synthetic French speech, not a human recording",
+  "audio_text": "Bonjour. Nous testons la transcription en temps réel. Le modèle fonctionne sur cet ordinateur, sans connexion à Internet.",
+  "asr_model_snapshot": "02eb0caeb9dafb554c17a72b93dbf40cd3736c31",
+  "modes": {
+    "inference": {
+      "run_count": 18,
+      "input_sha256": "07fa75b1e306697b73e2afa775cf5a4e77e6af69c540e682835fce3f92730610",
+      "medians": [
+        {
+          "variant": "baseline",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 654.6200000011595,
+          "warmup_ms": 47.308249999332475,
+          "total_ms": 157.05708299901744,
+          "drain_ms": null,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": null,
+          "peak_rss_bytes": 498188288,
+          "source_chars_per_second": 929.7041284149911,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 33.55881249990489,
+              "p95": 71.53050000124495
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 657.3433749999822,
+          "warmup_ms": 47.217000001182896,
+          "total_ms": 156.5757089992985,
+          "drain_ms": null,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": null,
+          "peak_rss_bytes": 497303552,
+          "source_chars_per_second": 932.5679411847195,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 33.2583754998268,
+              "p95": 71.93033399926207
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 1,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 662.1022080016701,
+          "warmup_ms": 51.04083299920603,
+          "total_ms": 168.3869999997114,
+          "drain_ms": null,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": null,
+          "peak_rss_bytes": 496189440,
+          "source_chars_per_second": 867.1445104112314,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 35.05529150061193,
+              "p95": 77.56999999946856
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 4,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 667.0902499990916,
+          "warmup_ms": 49.92175000006682,
+          "total_ms": 161.86870800083852,
+          "drain_ms": null,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": null,
+          "peak_rss_bytes": 498597888,
+          "source_chars_per_second": 902.0784177093814,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 34.564312999464164,
+              "p95": 74.63633299994399
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 2,
+          "idle_ms": 1500.0,
+          "load_ms": 659.6729590000905,
+          "warmup_ms": 43.57924999931129,
+          "total_ms": 137.93204200010223,
+          "drain_ms": null,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": null,
+          "peak_rss_bytes": 497041408,
+          "source_chars_per_second": 1058.628177097661,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 30.021583500456472,
+              "p95": 61.198332999993
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 1,
+          "idle_ms": 1500.0,
+          "load_ms": 660.7962500002031,
+          "warmup_ms": 34.01266700166161,
+          "total_ms": 110.63079200175707,
+          "drain_ms": null,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": null,
+          "peak_rss_bytes": 497123328,
+          "source_chars_per_second": 1319.9177018459347,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 24.162708000403654,
+              "p95": 50.283582999327336
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        }
+      ],
+      "unique_outputs": [
+        {
+          "variant": "baseline",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction en direct.",
+              "english": "We test live translation.",
+              "error": null
+            },
+            {
+              "source": "Nous continuons à parler sans ponctuation pour vérifier la limite de durée.",
+              "english": "We continue to speak without punctuation to verify the time limit.",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction en direct.",
+              "english": "We test live translation.",
+              "error": null
+            },
+            {
+              "source": "Nous continuons à parler sans ponctuation pour vérifier la limite de durée.",
+              "english": "We continue to speak without punctuation to verify the time limit.",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 1,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction en direct.",
+              "english": "We test live translation.",
+              "error": null
+            },
+            {
+              "source": "Nous continuons à parler sans ponctuation pour vérifier la limite de durée.",
+              "english": "We continue to speak without punctuation to verify the time limit.",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 4,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction en direct.",
+              "english": "We test live translation.",
+              "error": null
+            },
+            {
+              "source": "Nous continuons à parler sans ponctuation pour vérifier la limite de durée.",
+              "english": "We continue to speak without punctuation to verify the time limit.",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 2,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction en direct.",
+              "english": "We test live translation.",
+              "error": null
+            },
+            {
+              "source": "Nous continuons à parler sans ponctuation pour vérifier la limite de durée.",
+              "english": "We continue to speak without punctuation to verify the time limit.",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 1,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction en direct.",
+              "english": "We're testing live translation.",
+              "error": null
+            },
+            {
+              "source": "Nous continuons à parler sans ponctuation pour vérifier la limite de durée.",
+              "english": "We continue to speak without punctuation to check the time limit.",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        }
+      ]
+    },
+    "text": {
+      "run_count": 21,
+      "input_sha256": "068de511e8f5b7621a4048d29756eaa26950c63976c5f4dbe358006b831a7b05",
+      "medians": [
+        {
+          "variant": "baseline",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 657.8821669991157,
+          "warmup_ms": 47.207208999680006,
+          "total_ms": 10464.257457999338,
+          "drain_ms": 59.20108300051652,
+          "first_english_ms": 18.59054200031096,
+          "max_outstanding_source_chars": 66,
+          "peak_rss_bytes": 504659968,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 54.73458400047093,
+              "p95": 88.5582089995296
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 659.2278329990222,
+          "warmup_ms": 47.30870899948059,
+          "total_ms": 10470.758500001466,
+          "drain_ms": 65.71920900023542,
+          "first_english_ms": 18.45829099875118,
+          "max_outstanding_source_chars": 59,
+          "peak_rss_bytes": 503988224,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 1700.0199169997359,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 0.16116699953272473,
+              "p95": 5.184124998777406
+            },
+            "inference_ms": {
+              "median": 54.17416599993885,
+              "p95": 85.47308400011389
+            },
+            "output_latency_ms": {
+              "median": 1759.4951249993755,
+              "p95": 5089.134584000931
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 750.0,
+          "load_ms": 657.8995840009156,
+          "warmup_ms": 47.733792000144604,
+          "total_ms": 10464.190749999034,
+          "drain_ms": 59.15208300029917,
+          "first_english_ms": 18.713457999183447,
+          "max_outstanding_source_chars": 59,
+          "peak_rss_bytes": 504872960,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 626.5333955007009,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 2.2559795006600325,
+              "p95": 5.245249998552026
+            },
+            "inference_ms": {
+              "median": 52.535667000483954,
+              "p95": 84.55433299968718
+            },
+            "output_latency_ms": {
+              "median": 685.7131250008024,
+              "p95": 5089.724166000451
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 1,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 740.3682079984719,
+          "warmup_ms": 52.04287500055216,
+          "total_ms": 10469.271040999956,
+          "drain_ms": 68.27175000034913,
+          "first_english_ms": 20.69099999971513,
+          "max_outstanding_source_chars": 59,
+          "peak_rss_bytes": 503709696,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 1700.0251249992289,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 0.1699170006759232,
+              "p95": 3.764166000109981
+            },
+            "inference_ms": {
+              "median": 42.88033300144889,
+              "p95": 92.3079999993206
+            },
+            "output_latency_ms": {
+              "median": 1746.1357079992013,
+              "p95": 5095.073665999735
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 4,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 656.7674590005481,
+          "warmup_ms": 49.12412500016217,
+          "total_ms": 10475.336207999135,
+          "drain_ms": 71.00625000020955,
+          "first_english_ms": 18.0527920001623,
+          "max_outstanding_source_chars": 59,
+          "peak_rss_bytes": 504496128,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 1700.021000000561,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 0.17145800120488275,
+              "p95": 5.207917000007001
+            },
+            "inference_ms": {
+              "median": 55.46345900074812,
+              "p95": 86.62479099984921
+            },
+            "output_latency_ms": {
+              "median": 1761.3825839998754,
+              "p95": 5091.582917000778
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 2,
+          "idle_ms": 1500.0,
+          "load_ms": 649.9368339991634,
+          "warmup_ms": 44.24837500118883,
+          "total_ms": 10456.34337499905,
+          "drain_ms": 51.62625000048138,
+          "first_english_ms": 17.366250000122818,
+          "max_outstanding_source_chars": 59,
+          "peak_rss_bytes": 503283712,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 1700.0182079991646,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 0.1721660009934567,
+              "p95": 3.703583999595139
+            },
+            "inference_ms": {
+              "median": 51.43366599986621,
+              "p95": 83.35720899958687
+            },
+            "output_latency_ms": {
+              "median": 1754.8932090012386,
+              "p95": 5087.848082999699
+            }
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 1,
+          "idle_ms": 1500.0,
+          "load_ms": 650.8865420000802,
+          "warmup_ms": 34.39883400096733,
+          "total_ms": 10444.84420900153,
+          "drain_ms": 40.63958400001866,
+          "first_english_ms": 12.427958999978728,
+          "max_outstanding_source_chars": 59,
+          "peak_rss_bytes": 503431168,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 1701.2143339998147,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 0.17554200167069212,
+              "p95": 5.186541999137262
+            },
+            "inference_ms": {
+              "median": 40.39149999880465,
+              "p95": 70.74724999984028
+            },
+            "output_latency_ms": {
+              "median": 1748.2479589998547,
+              "p95": 5075.933250000162
+            }
+          },
+          "failures": 0
+        }
+      ],
+      "unique_outputs": [
+        {
+          "variant": "baseline",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la limite",
+              "english": "we keep talking without punctuation to check the limit",
+              "error": null
+            },
+            {
+              "source": "de durée Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la",
+              "english": "we continue to speak without punctuation to verify the",
+              "error": null
+            },
+            {
+              "source": "limite de durée Merci pour votre attention",
+              "english": "Thanks for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 750.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la",
+              "english": "we continue to speak without punctuation to verify the",
+              "error": null
+            },
+            {
+              "source": "limite de durée",
+              "english": "time limit",
+              "error": null
+            },
+            {
+              "source": "Merci pour votre attention",
+              "english": "Thank you for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 1,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la",
+              "english": "we continue to speak without punctuation to verify the",
+              "error": null
+            },
+            {
+              "source": "limite de durée Merci pour votre attention",
+              "english": "Thanks for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 4,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la",
+              "english": "we continue to speak without punctuation to verify the",
+              "error": null
+            },
+            {
+              "source": "limite de durée Merci pour votre attention",
+              "english": "Thanks for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 2,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la",
+              "english": "we continue to speak without punctuation to verify the",
+              "error": null
+            },
+            {
+              "source": "limite de durée Merci pour votre attention",
+              "english": "Thanks for your attention",
+              "error": null
+            }
+          ]
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 1,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour.",
+              "english": "Hello.",
+              "error": null
+            },
+            {
+              "source": "Nous testons la traduction",
+              "english": "We test the translation",
+              "error": null
+            },
+            {
+              "source": "en direct.",
+              "english": "live.",
+              "error": null
+            },
+            {
+              "source": "nous continuons à parler sans ponctuation pour vérifier la",
+              "english": "we continue to speak without punctuation to check the",
+              "error": null
+            },
+            {
+              "source": "limite de durée Merci pour votre attention",
+              "english": "Thanks for your attention",
+              "error": null
+            }
+          ]
+        }
+      ]
+    },
+    "audio": {
+      "run_count": 24,
+      "input_sha256": "0af15a8cd9b4979616d1728e31ff9300255efe33c2b0064912e086d3b71ebe90",
+      "medians": [
+        {
+          "variant": "asr-only",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 0,
+          "warmup_ms": 0,
+          "total_ms": 8735.900124998807,
+          "drain_ms": 0.0018339997041039169,
+          "first_english_ms": null,
+          "max_outstanding_source_chars": 0,
+          "peak_rss_bytes": 3919118336,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": null,
+              "p95": null
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "audio": {
+            "first_text_ms": 1549.8425829991902,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8734.697624999171
+          },
+          "failures": 0
+        },
+        {
+          "variant": "baseline",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 1030.0489580004069,
+          "warmup_ms": 47.19212499912828,
+          "total_ms": 8868.952333999914,
+          "drain_ms": 34.072000000378466,
+          "first_english_ms": 6926.739042000918,
+          "max_outstanding_source_chars": 94,
+          "peak_rss_bytes": 4287512576,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": null,
+              "p95": null
+            },
+            "ready_wait_ms": {
+              "median": null,
+              "p95": null
+            },
+            "inference_ms": {
+              "median": 62.21670800005086,
+              "p95": 90.00045799984946
+            },
+            "output_latency_ms": {
+              "median": null,
+              "p95": null
+            }
+          },
+          "audio": {
+            "first_text_ms": 1551.232916999652,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8833.27166699928
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 851.5676660008467,
+          "warmup_ms": 46.61816699990595,
+          "total_ms": 8798.204750000878,
+          "drain_ms": 64.55174999973678,
+          "first_english_ms": 6648.707292000836,
+          "max_outstanding_source_chars": 83,
+          "peak_rss_bytes": 4295409664,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 3890.9145204997913,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 2.6867710002989043,
+              "p95": 5.121750000398606
+            },
+            "inference_ms": {
+              "median": 76.66095850072452,
+              "p95": 88.45137499884004
+            },
+            "output_latency_ms": {
+              "median": 3970.7559794996996,
+              "p95": 5093.590666001546
+            }
+          },
+          "audio": {
+            "first_text_ms": 1553.393333000713,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8732.230707999406
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 750.0,
+          "load_ms": 853.5091249996185,
+          "warmup_ms": 47.57337500086578,
+          "total_ms": 8799.560957999347,
+          "drain_ms": 60.00158299866598,
+          "first_english_ms": 6653.572334000273,
+          "max_outstanding_source_chars": 83,
+          "peak_rss_bytes": 4295016448,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 1905.3351669990661,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 5.114500001582201,
+              "p95": 5.140541999935522
+            },
+            "inference_ms": {
+              "median": 59.83691699839255,
+              "p95": 92.04058300019824
+            },
+            "output_latency_ms": {
+              "median": 1965.5699579998327,
+              "p95": 5097.187291999944
+            }
+          },
+          "audio": {
+            "first_text_ms": 1554.8699170012696,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8738.142207999772
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 1,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 855.7274579998193,
+          "warmup_ms": 50.934582999616396,
+          "total_ms": 8788.878999999724,
+          "drain_ms": 53.4235830000398,
+          "first_english_ms": 6656.474375000471,
+          "max_outstanding_source_chars": 83,
+          "peak_rss_bytes": 4292968448,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 3888.225979500021,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 2.6321249997636187,
+              "p95": 5.111709000630071
+            },
+            "inference_ms": {
+              "median": 75.84962500004622,
+              "p95": 97.80624999984866
+            },
+            "output_latency_ms": {
+              "median": 3966.7125630003284,
+              "p95": 5102.9558750014985
+            }
+          },
+          "audio": {
+            "first_text_ms": 1553.7427919989568,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8734.780916998716
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 4,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "load_ms": 855.2718749997439,
+          "warmup_ms": 49.543125000127475,
+          "total_ms": 8809.920290999798,
+          "drain_ms": 65.86608299949148,
+          "first_english_ms": 6662.303166000129,
+          "max_outstanding_source_chars": 83,
+          "peak_rss_bytes": 4295753728,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 3892.0523960005085,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 2.3316460010391893,
+              "p95": 4.421917001309339
+            },
+            "inference_ms": {
+              "median": 83.00956249968294,
+              "p95": 108.17233299894724
+            },
+            "output_latency_ms": {
+              "median": 3980.7268750009825,
+              "p95": 5112.599375001082
+            }
+          },
+          "audio": {
+            "first_text_ms": 1553.106374998606,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8741.032500000074
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 2,
+          "idle_ms": 1500.0,
+          "load_ms": 856.3520829993649,
+          "warmup_ms": 42.50295800011372,
+          "total_ms": 8796.885166999346,
+          "drain_ms": 61.85416699918278,
+          "first_english_ms": 6642.891749999762,
+          "max_outstanding_source_chars": 83,
+          "peak_rss_bytes": 4293132288,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 3889.0833960003874,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 2.713457999561797,
+              "p95": 5.177166000066791
+            },
+            "inference_ms": {
+              "median": 78.92839599935542,
+              "p95": 95.50920800029417
+            },
+            "output_latency_ms": {
+              "median": 3970.7296249998763,
+              "p95": 5091.578040999593
+            }
+          },
+          "audio": {
+            "first_text_ms": 1549.8288750004576,
+            "max_audio_backlog_ms": 80.0,
+            "total_ms": 8733.650709000358
+          },
+          "failures": 0
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 1,
+          "idle_ms": 1500.0,
+          "load_ms": 854.8163339983148,
+          "warmup_ms": 34.03508299925306,
+          "total_ms": 8743.345124999905,
+          "drain_ms": 28.043667000019923,
+          "first_english_ms": 6633.100207998723,
+          "max_outstanding_source_chars": 83,
+          "peak_rss_bytes": 4288299008,
+          "source_chars_per_second": null,
+          "metrics": {
+            "buffering_ms": {
+              "median": 3879.295374999856,
+              "p95": 5000.0
+            },
+            "ready_wait_ms": {
+              "median": 2.938062500106753,
+              "p95": 5.715332999898237
+            },
+            "inference_ms": {
+              "median": 50.27712499941117,
+              "p95": 70.89612500021758
+            },
+            "output_latency_ms": {
+              "median": 3935.601936999774,
+              "p95": 5076.617208000243
+            }
+          },
+          "audio": {
+            "first_text_ms": 1550.749291000102,
+            "max_audio_backlog_ms": 160.0,
+            "total_ms": 8714.018665999902
+          },
+          "failures": 0
+        }
+      ],
+      "unique_outputs": [
+        {
+          "variant": "asr-only",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "baseline",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet",
+              "english": "Hello, we test the transcription in real time, the model works on this",
+              "error": null
+            },
+            {
+              "source": "ordinateur, sans connexion à internet.",
+              "english": "computer, no internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur",
+              "english": "Hello, we test the transcription in real time, the model works on",
+              "error": null
+            },
+            {
+              "source": "cet ordinateur, sans connexion à internet.",
+              "english": "This computer, without internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 4,
+          "idle_ms": 750.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur",
+              "english": "Hello, we test the transcription in real time, the model works on",
+              "error": null
+            },
+            {
+              "source": "cet",
+              "english": "the",
+              "error": null
+            },
+            {
+              "source": "ordinateur, sans connexion à internet.",
+              "english": "computer, no internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "candidate",
+          "threads": 1,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur",
+              "english": "Hello, we test the transcription in real time, the model works on",
+              "error": null
+            },
+            {
+              "source": "cet ordinateur, sans connexion à internet.",
+              "english": "This computer, without internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "candidate",
+          "threads": 4,
+          "beam": 4,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur",
+              "english": "Hello, we test the transcription in real time, the model works on",
+              "error": null
+            },
+            {
+              "source": "cet ordinateur, sans connexion à internet.",
+              "english": "This computer, without internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 2,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur",
+              "english": "Hello, we test the transcription in real time, the model works on",
+              "error": null
+            },
+            {
+              "source": "cet ordinateur, sans connexion à internet.",
+              "english": "This computer, without internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        },
+        {
+          "variant": "candidate",
+          "threads": 2,
+          "beam": 1,
+          "idle_ms": 1500.0,
+          "phrases": [
+            {
+              "source": "Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur",
+              "english": "Hello, we test the transcription in real time, the model works on",
+              "error": null
+            },
+            {
+              "source": "cet ordinateur, sans connexion à internet.",
+              "english": "This computer, without internet connection.",
+              "error": null
+            }
+          ],
+          "transcript": " Bonjour, nous testons la transcription en temps réel, le modèle fonctionne sur cet ordinateur, sans connexion à internet.\n"
+        }
+      ]
+    }
+  }
+}

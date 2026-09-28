@@ -13,7 +13,7 @@ With `uv` installed, just run this from the project folder:
 ```
 
 This starts live French-to-English translation with the quality preset,
-shows both languages in your terminal, and saves them in `transcripts/`.
+streams English in your terminal, and saves French and English in `transcripts/`.
 Dependencies and missing models are downloaded automatically on first use.
 Allow microphone access if prompted. Press **Ctrl+C** to stop.
 
@@ -45,6 +45,27 @@ The script uses `uv`, displays text live in your terminal, and saves the same
 text to a timestamped file in `transcripts/`. Extra options are passed to
 voxmlx, for example `./transcribe.sh --context-size 1024`.
 
+**Live audio batching:**
+
+```bash
+./transcribe.sh --audio-batch-ms 160
+```
+
+The default remains 80 ms for low latency. Optional 160 or 320 ms minimum
+batches reduce encoder work per second of audio by processing more frames
+at once, adding up to approximately 80 or 240 ms of buffering respectively.
+Startup still begins with an 80 ms block. If audio accumulates during processing,
+all modes catch up in batches of up to 320 ms without additional waiting.
+Shutdown flushes partial batches. The setting is independent of transcription
+`--delay-ms` and of translation.
+
+The streaming encoder now enforces its configured attention window for every
+query, including within larger batches. This corrects batch-dependent extra
+history in the previous causal-only mask, so output can differ near window
+boundaries. File transcription uses the same attention window in bounded chunks.
+See [benchmark and validation instructions](benchmarks/README.md) for timings
+and their limits.
+
 **Quality preset for an M5 Max with 48 GB:**
 
 ```bash
@@ -75,11 +96,31 @@ opening the microphone, it downloads and prepares the French-to-English
 needed. Downloads are required on first use; speech and text are processed
 locally, with translation on the CPU. Cached models work offline afterward.
 
-The terminal and saved transcript show paired `FR:` and `EN:` lines. Translation
-updates at sentence boundaries, after a short pause, or in chunks during long
-unpunctuated speech. It adds phrase buffering and translation time to Voxtral's
-delay. Ctrl+C drains pending translations before exiting. French source text
-is kept if a translation fails. This option assumes French input.
+The terminal shows English only, word by word, like a simultaneous interpreter:
+after each French word, the open sentence is translated again, and English words
+appear once two consecutive translations agree. Words already shown are never
+changed; later translations continue from them. Each sentence ends its line.
+On a synthetic test clip, the first English appeared about 1 second after the
+first French text, and English then trailed the French by roughly 0.5–1 second.
+Translation runs on the CPU and does not delay transcription. The saved transcript
+keeps paired `FR:` and `EN:` lines for each sentence. Ctrl+C drains pending
+translations before exiting. If a translation fails, the French is shown and
+saved in its place. This option assumes French input.
+
+A sentence is completed at its punctuation, after a 1.5-second pause, at a word
+boundary after 240 characters, or at shutdown. Its last words appear then, since
+the word still being spoken may change. To complete unpunctuated sentences
+sooner, at some cost in context:
+
+```bash
+./transcribe.sh --translate-en --translation-idle-ms 750
+```
+
+Pauses are measured from text arrival times, so a busy translator does not
+restart the pause timer for an overdue sentence.
+
+See [translation benchmarks](benchmarks/README.md#translation-benchmarks) for
+inference, timestamped text replay, and combined audio measurements.
 
 For direct CLI usage, install with `uv sync --extra translation --no-editable`
 and run `uv run --extra translation --no-editable voxmlx --translate-en`.
@@ -103,8 +144,11 @@ voxmlx --audio audio.flac
 | `--model` | Model path or HuggingFace model ID | `mlx-community/Voxtral-Mini-4B-Realtime-6bit` |
 | `--temp` | Sampling temperature (`0` = greedy) | `0.0` |
 | `--context-size` | Live decoder context; must fit `33 + delay_ms / 80` tokens | `8192` |
+| `--audio-batch-ms` | Minimum live audio batch: `80`, `160`, or `320` ms | `80` |
 | `--delay-ms` | Live delay: multiples of 80 from 80–1200, or 2400 | `480` |
-| `--translate-en` | Local French-to-English translation; display/save both languages | Off |
+| `--translation-idle-ms` | Pause before completing an unpunctuated sentence; positive finite milliseconds | `1500` |
+| `--translate-en` | Local French-to-English translation; show English live | Off |
+| `--transcript` | Append the transcript to a file; French and English pairs with `--translate-en` | None |
 
 ### `voxmlx-convert`
 
