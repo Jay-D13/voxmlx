@@ -10,18 +10,12 @@ from .model import VoxtralRealtime
 
 
 def download_model(model_id: str = "mistralai/Voxtral-Mini-4B-Realtime-2602") -> Path:
-    path = snapshot_download(
-        model_id,
-        allow_patterns=[
-            "consolidated.safetensors",
-            "model*.safetensors",
-            "model.safetensors.index.json",
-            "params.json",
-            "config.json",
-            "tekken.json",
-        ],
-    )
-    return Path(path)
+    # Mistral's repo also has an unused Transformers copy of the weights, so fetch only what we load.
+    path = Path(snapshot_download(model_id, allow_patterns=["consolidated.safetensors", "params.json", "tekken.json"]))
+    if not (path / "consolidated.safetensors").exists():  # a converted MLX repo
+        converted = ["model*.safetensors", "model.safetensors.index.json", "config.json", "tekken.json"]
+        path = Path(snapshot_download(model_id, allow_patterns=converted))
+    return path
 
 
 # Weight name remapping patterns: (regex, replacement)
