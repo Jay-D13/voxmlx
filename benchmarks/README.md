@@ -157,6 +157,36 @@ report. Future changes must meet that threshold and pass numerical checks.
 Whole-decoder compilation, conditioning caches, and quantization changes remain
 outside this implementation.
 
+## Encoder ring cache (2026-11-18)
+
+Live encoder steps of 4–16 frames used to copy the whole 750-frame window in all
+32 layers. The cache now keeps a ring of the window plus one chunk, overwrites the
+oldest slots in place, masks by position, and rebuilds only when the chunk size
+changes. Apple M5, MLX 0.32.4, baseline `ce35859`, medians of three alternating
+repetitions ([results](ring-cache-results-m5.json)). Components mode, 20 s of noise:
+
+| Version / batch | Encoder ms / audio second | Total s | Peak MLX GB |
+|---|---:|---:|---:|
+| Baseline / 80 ms | 195.6 | 10.19 | 3.941 |
+| Ring cache / 80 ms | 139.2 | 8.76 | 3.974 |
+| Baseline / 160 ms | 121.1 | 8.41 | 3.958 |
+| Ring cache / 160 ms | 109.7 | 8.14 | 4.048 |
+| Baseline / 320 ms | 86.7 | 7.69 | 3.989 |
+| Ring cache / 320 ms | 83.1 | 7.59 | 4.023 |
+
+Paced mode, 80 ms batches, 34.8-second French clip from `say -v Thomas`:
+
+| Version | First text ms | Max backlog ms | Total s | Peak MLX GB |
+|---|---:|---:|---:|---:|
+| Baseline | 1250 | 240 | 35.45 | 3.990 |
+| Ring cache | 1248 | 80 | 35.40 | 4.071 |
+
+All paced transcripts were identical. On that clip with a full window, the median
+encoder step fell from 13.9 to 11.1 ms at one token per step (28.4 to 25.6 ms at
+four), with identical tokens. Caveats: one machine, one voice, one noise input,
+and a rebuild briefly holds an extra copy of the window, so peak memory is up to
+0.1 GB higher.
+
 
 ## Translation benchmarks
 
@@ -396,3 +426,45 @@ attention". The previous scheduler split it mid-phrase, and its English for
 Translation CPU was 1.44 s versus 0.25 s. All 18 runs completed without failures,
 and the 45-test suite passed. One synthetic clip and one fixture are not a
 translation-quality evaluation.
+
+## Accuracy benchmark (2026-11-18)
+
+`benchmarks/accuracy.py` measures word and character error rates (WER, CER) on a manifest
+of recordings. `mode=file` calls `voxmlx.transcribe`; `mode=stream` runs the real live loop,
+`stream_transcribe`, with the microphone replaced by the recording. Audio arrives as fast as
+the loop takes it, so a machine that falls behind real time is not exercised.
+
+```bash
+.venv/bin/python benchmarks/accuracy.py synth --out fr
+.venv/bin/python benchmarks/accuracy.py run --manifest fr/manifest.jsonl --model MODEL_DIR --config mode=file \
+  --config mode=stream,context_size=512,delay_ms=480 --config mode=stream,context_size=512,delay_ms=240 \
+  --config mode=stream,context_size=512,delay_ms=2400 --config mode=stream,context_size=512,delay_ms=480,audio_batch_ms=160 \
+  --config mode=stream,context_size=512,delay_ms=480,audio_batch_ms=320
+.venv/bin/python benchmarks/accuracy.py run --manifest fr/manifest-long.jsonl --model MODEL_DIR \
+  --config mode=stream,context_size=512 --config mode=stream,context_size=8192 --config mode=file
+```
+
+Scoring lowercases and turns punctuation into spaces but keeps accents, so numbers or
+accents written differently ("9 000" and "9000") count as errors.
+
+**This is synthetic speech from one macOS voice (`say -v Thomas`): 21 French sentences
+(84 s), and the same clips joined by 0.8 s of silence (100 s). It is a pipeline check and a
+relative comparison of settings, not evidence about human recordings.** Apple M5, MLX 0.32.4,
+6-bit model, 80 ms batches unless shown; [summary lines](accuracy-synthetic-results-m5.jsonl).
+Real-time factor (RTF) is wall time over audio time.
+
+| Manifest | Configuration | WER | CER | RTF |
+|---|---|---:|---:|---:|
+| 21 clips | file, delay 2400 ms | 2.62% | 1.13% | 0.415 |
+| 21 clips | stream, context 512, delay 480 ms | 2.62% | 1.13% | 0.557 |
+| 21 clips | stream, context 512, delay 240 ms | 3.75% | 1.59% | 0.553 |
+| 21 clips | stream, context 512, delay 2400 ms | 2.25% | 0.76% | 0.594 |
+| 21 clips | stream, context 512, delay 480 ms, batch 160 ms | 2.62% | 1.13% | 0.524 |
+| 21 clips | stream, context 512, delay 480 ms, batch 320 ms | 2.62% | 1.13% | 0.515 |
+| 100 s recording | stream, context 512, delay 480 ms | 2.25% | 0.74% | 0.455 |
+| 100 s recording | stream, context 8192, delay 480 ms | 2.25% | 0.74% | 0.461 |
+| 100 s recording | file, delay 2400 ms | 2.25% | 0.74% | 0.321 |
+
+Six word errors in every row are formatting only: "Étienne" as "Etienne", "1 204" and
+"9 000" without the space (two each), and "2e" as "deuxième". Most short-clip rows also write
+"douzième" as "12ème". The only real mishearing is at 240 ms: "Elle a payé" became "Et la payer".

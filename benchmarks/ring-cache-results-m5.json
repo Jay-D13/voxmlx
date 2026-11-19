@@ -1,0 +1,98 @@
+{
+  "date": "2026-11-18",
+  "hardware": "Apple M5, 24 GiB",
+  "os": "macOS 27.2.1",
+  "python": "3.12.11",
+  "mlx": "0.32.4",
+  "model": "mlx-community/Voxtral-Mini-4B-Realtime-6bit",
+  "model_revision": "02eb0caeb9dafb554c17a72b93dbf40cd3736c31",
+  "baseline": "ce35859",
+  "context_size": 512,
+  "repeats": 3,
+  "components_20s_noise": [
+    {
+      "variant": "baseline",
+      "batch_ms": 80,
+      "encoder_ms_per_audio_second": 195.6,
+      "total_s": 10.19,
+      "peak_memory_gb": 3.941
+    },
+    {
+      "variant": "candidate",
+      "batch_ms": 80,
+      "encoder_ms_per_audio_second": 139.2,
+      "total_s": 8.76,
+      "peak_memory_gb": 3.974
+    },
+    {
+      "variant": "baseline",
+      "batch_ms": 160,
+      "encoder_ms_per_audio_second": 121.1,
+      "total_s": 8.41,
+      "peak_memory_gb": 3.958
+    },
+    {
+      "variant": "candidate",
+      "batch_ms": 160,
+      "encoder_ms_per_audio_second": 109.7,
+      "total_s": 8.14,
+      "peak_memory_gb": 4.048
+    },
+    {
+      "variant": "baseline",
+      "batch_ms": 320,
+      "encoder_ms_per_audio_second": 86.7,
+      "total_s": 7.69,
+      "peak_memory_gb": 3.989
+    },
+    {
+      "variant": "candidate",
+      "batch_ms": 320,
+      "encoder_ms_per_audio_second": 83.1,
+      "total_s": 7.59,
+      "peak_memory_gb": 4.023
+    }
+  ],
+  "paced_french_34_8s": [
+    {
+      "variant": "baseline",
+      "batch_ms": 80,
+      "first_text_ms": 1250,
+      "max_audio_backlog_ms": 240,
+      "total_s": 35.45,
+      "peak_memory_gb": 3.99
+    },
+    {
+      "variant": "candidate",
+      "batch_ms": 80,
+      "first_text_ms": 1248,
+      "max_audio_backlog_ms": 80,
+      "total_s": 35.4,
+      "peak_memory_gb": 4.071
+    },
+    {
+      "variant": "candidate",
+      "batch_ms": 160,
+      "first_text_ms": 1288,
+      "max_audio_backlog_ms": 160,
+      "total_s": 35.43,
+      "peak_memory_gb": 4.072
+    },
+    {
+      "variant": "candidate",
+      "batch_ms": 320,
+      "first_text_ms": 1464,
+      "max_audio_backlog_ms": 320,
+      "total_s": 35.39,
+      "peak_memory_gb": 4.093
+    }
+  ],
+  "paced_transcripts_identical": true,
+  "encoder_step_median_ms": {
+    "baseline_1_token": 13.9,
+    "ring_1_token": 11.1,
+    "baseline_4_tokens": 28.4,
+    "ring_4_tokens": 25.6,
+    "tokens_identical": true
+  }
+}

@@ -107,7 +107,10 @@ def _quantize_model(model: nn.Module, group_size: int = 64, bits: int = 4):
 
 
 def _upload_to_hub(path: str, upload_repo: str, hf_path: str | None = None):
-    from huggingface_hub import HfApi, ModelCard, ModelCardData
+    from huggingface_hub import HfApi, ModelCard
+
+    if hf_path is not None and Path(hf_path).exists():
+        hf_path = None  # a local directory, not a Hub repo to link to
 
     card_path = Path(path) / "README.md"
     if card_path.exists():
@@ -115,7 +118,7 @@ def _upload_to_hub(path: str, upload_repo: str, hf_path: str | None = None):
     elif hf_path is not None:
         card = ModelCard.load(hf_path)
     else:
-        card = ModelCard.from_template(ModelCardData(language="en"))
+        card = ModelCard("---\nlanguage: en\n---\n")  # ModelCard.from_template needs Jinja2
 
     card.data.library_name = "mlx"
     card.data.pipeline_tag = "automatic-speech-recognition"
@@ -155,11 +158,7 @@ print(text)
 
     api = HfApi()
     api.create_repo(repo_id=upload_repo, exist_ok=True)
-    api.upload_large_folder(
-        folder_path=path,
-        repo_id=upload_repo,
-        repo_type="model",
-    )
+    api.upload_folder(folder_path=path, repo_id=upload_repo, repo_type="model")
     print(f"Upload successful: https://huggingface.co/{upload_repo}")
 
 
@@ -177,7 +176,7 @@ def convert(
         raise ValueError(f"Output path {mlx_path} already exists.")
 
     print(f"[INFO] Loading {hf_path}")
-    src_path = download_model(hf_path)
+    src_path = Path(hf_path) if Path(hf_path).exists() else download_model(hf_path)
     model, config = load_model(src_path)
 
     # Cast dtype if requested

@@ -1,3 +1,5 @@
+import functools
+
 import mlx.core as mx
 
 
@@ -36,25 +38,50 @@ class RotatingKVCache:
         else:
             return v[..., : self._idx, :]
 
+    def _resize(self, v, size):
+        # Keep the last max_size - 1 entries in order, then zeros up to size.
+        v = self._temporal_order(v)
+        n = min(v.shape[2], self.max_size - 1)
+        zeros = mx.zeros(v.shape[:2] + (size - n, v.shape[3]), v.dtype)
+        return self._trim(v.shape[2] - n, v, zeros)
+
     def _update_concat(self, keys, values):
+        S = keys.shape[2]
         if self.keys is None:
             self.keys = keys
             self.values = values
-        else:
-            self.keys = self._temporal_order(self.keys)
-            self.values = self._temporal_order(self.values)
-            self._idx = self.keys.shape[2]
+            self._idx = S
+            self._offset += S
+            return self.keys, self.values
 
-            trim_size = self._idx - self.max_size + 1
-            self.keys = self._trim(trim_size, self.keys, keys)
-            self.values = self._trim(trim_size, self.values, values)
-        self._offset += keys.shape[2]
-        self._idx = self.keys.shape[2]
+        # The buffer is a ring of the window before the chunk plus the chunk.
+        size = self.max_size - 1 + S
+        if self.keys.shape[2] != size:
+            self.keys = self._resize(self.keys, size)
+            self.values = self._resize(self.values, size)
+            self._idx = min(self._offset, self.max_size - 1)
+
+        # Overwrite the oldest slots, wrapping at the end of the buffer.
+        idx = self._idx % size
+        first = min(S, size - idx)
+        self.keys[..., idx : idx + first, :] = keys[..., :first, :]
+        self.values[..., idx : idx + first, :] = values[..., :first, :]
+        if first < S:
+            self.keys[..., : S - first, :] = keys[..., first:, :]
+            self.values[..., : S - first, :] = values[..., first:, :]
+        self._idx = (idx + S) % size
+        self._offset += S
         return self.keys, self.values
 
     def _update_in_place(self, keys, values):
         B, n_kv_heads, S, k_head_dim = keys.shape
         prev = self._offset
+        if self.keys is not None and self.keys.shape[2] > self.max_size:
+            # A chunked update may have left a wrapped ring.
+            self.keys = self._temporal_order(self.keys)
+            self.values = self._temporal_order(self.values)
+            self._idx = self.keys.shape[2]
+
         if self.keys is None or (
             prev >= self.keys.shape[2] and self.keys.shape[2] < self.max_size
         ):
@@ -93,3 +120,16 @@ class RotatingKVCache:
         if keys.shape[2] == 1:
             return self._update_in_place(keys, values)
         return self._update_concat(keys, values)
+
+    def window_mask(self, n_queries):
+        size = self.keys.shape[2]
+        return _window_mask(self._offset, n_queries, size, self._idx % size, self.max_size)
+
+
+# All layers of a step share one mask.
+@functools.lru_cache(maxsize=1)
+def _window_mask(offset, n_queries, size, idx, max_size):
+    # Slot j holds position offset - size + (j - idx) % size; negative means never written.
+    positions = offset - size + (mx.arange(size) + size - idx) % size
+    queries = offset - n_queries + mx.arange(n_queries)[:, None]
+    return (positions >= 0) & (positions <= queries) & (positions > queries - max_size)
