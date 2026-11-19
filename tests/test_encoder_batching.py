@@ -102,5 +102,38 @@ class EncoderBatchTests(unittest.TestCase):
         self.assertGreater(np.abs(windowed[:, 750:] - unwindowed[:, 750:]).max(), 10 * ATOL)
 
 
+class RingCacheTests(unittest.TestCase):
+    def check_stream(self, sizes):
+        mx.random.seed(21)
+        encoder = CausalWhisperEncoder(dim=16, n_layers=2, n_heads=2, head_dim=8,
+                                       hidden_dim=32, sliding_window=17)
+        x = mx.random.normal((1, sum(sizes), 16))
+        positions = mx.arange(x.shape[1])
+        distance = positions[:, None] - positions[None, :]
+        expected = x
+        for layer in encoder.layers:
+            expected = layer(expected, offset=0, mask=(distance >= 0) & (distance < 17))
+        cache = [RotatingKVCache(17) for _ in encoder.layers]
+        outputs, buffers, start = [], [], 0
+        for size in sizes:
+            outputs.append(encoder.forward_transformer(x[:, start:start + size], cache))
+            mx.eval(outputs[-1])
+            buffers.append(cache[0].keys)
+            start += size
+        np.testing.assert_allclose(np.array(mx.concatenate(outputs, axis=1)),
+                                   np.array(encoder.norm(expected)), atol=ATOL, rtol=1e-4)
+        return buffers
+
+    def test_steady_steps_write_in_place(self):
+        buffers = self.check_stream([132] + [8] * 20)
+        # The second step rebuilds the startup buffer; later steps reuse it.
+        for buffer in buffers[2:]:
+            self.assertIs(buffer, buffers[1])
+
+    def test_mixed_steps_match_reference(self):
+        # Chunk size changes, single tokens after a chunk, and chunks above the window.
+        self.check_stream([5, 8, 8, 1, 3, 16, 1, 1, 40, 4, 4, 2, 1, 17, 8, 8, 30, 4])
+
+
 if __name__ == '__main__':
     unittest.main()

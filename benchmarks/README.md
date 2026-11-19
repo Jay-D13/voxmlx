@@ -157,6 +157,36 @@ report. Future changes must meet that threshold and pass numerical checks.
 Whole-decoder compilation, conditioning caches, and quantization changes remain
 outside this implementation.
 
+## Encoder ring cache (2026-11-18)
+
+Live encoder steps of 4–16 frames used to copy the whole 750-frame window in all
+32 layers. The cache now keeps a ring of the window plus one chunk, overwrites the
+oldest slots in place, masks by position, and rebuilds only when the chunk size
+changes. Apple M5, MLX 0.32.4, baseline `ce35859`, medians of three alternating
+repetitions ([results](ring-cache-results-m5.json)). Components mode, 20 s of noise:
+
+| Version / batch | Encoder ms / audio second | Total s | Peak MLX GB |
+|---|---:|---:|---:|
+| Baseline / 80 ms | 195.6 | 10.19 | 3.941 |
+| Ring cache / 80 ms | 139.2 | 8.76 | 3.974 |
+| Baseline / 160 ms | 121.1 | 8.41 | 3.958 |
+| Ring cache / 160 ms | 109.7 | 8.14 | 4.048 |
+| Baseline / 320 ms | 86.7 | 7.69 | 3.989 |
+| Ring cache / 320 ms | 83.1 | 7.59 | 4.023 |
+
+Paced mode, 80 ms batches, 34.8-second French clip from `say -v Thomas`:
+
+| Version | First text ms | Max backlog ms | Total s | Peak MLX GB |
+|---|---:|---:|---:|---:|
+| Baseline | 1250 | 240 | 35.45 | 3.990 |
+| Ring cache | 1248 | 80 | 35.40 | 4.071 |
+
+All paced transcripts were identical. On that clip with a full window, the median
+encoder step fell from 13.9 to 11.1 ms at one token per step (28.4 to 25.6 ms at
+four), with identical tokens. Caveats: one machine, one voice, one noise input,
+and a rebuild briefly holds an extra copy of the window, so peak memory is up to
+0.1 GB higher.
+
 
 ## Translation benchmarks
 

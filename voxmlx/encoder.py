@@ -50,16 +50,8 @@ class EncoderAttention(nn.Module):
 
         if cache is not None:
             k, v = cache.update_and_fetch(k, v)
-            # Chunked caches retain extra keys for the earliest query. Mask those
-            # keys for later queries so the receptive field is batch-independent.
-            if L > 1 and cache.offset > cache.max_size:
-                queries = offset + mx.arange(L)[:, None]
-                keys = cache.offset - k.shape[2] + mx.arange(k.shape[2])[None, :]
-                mask = (keys <= queries) & (keys > queries - cache.max_size)
-            elif L == 1:
-                # A single query can attend to the entire rotating cache;
-                # physical key order is immaterial in this case.
-                mask = None
+            # A single query attends to the whole cache; a chunk needs a window mask.
+            mask = cache.window_mask(L) if L > 1 else None
 
         out = mx.fast.scaled_dot_product_attention(q, k, v, scale=self.scale, mask=mask)
         out = out.transpose(0, 2, 1, 3).reshape(B, L, -1)
