@@ -426,3 +426,45 @@ attention". The previous scheduler split it mid-phrase, and its English for
 Translation CPU was 1.44 s versus 0.25 s. All 18 runs completed without failures,
 and the 45-test suite passed. One synthetic clip and one fixture are not a
 translation-quality evaluation.
+
+## Accuracy benchmark (2026-11-18)
+
+`benchmarks/accuracy.py` measures word and character error rates (WER, CER) on a manifest
+of recordings. `mode=file` calls `voxmlx.transcribe`; `mode=stream` runs the real live loop,
+`stream_transcribe`, with the microphone replaced by the recording. Audio arrives as fast as
+the loop takes it, so a machine that falls behind real time is not exercised.
+
+```bash
+.venv/bin/python benchmarks/accuracy.py synth --out fr
+.venv/bin/python benchmarks/accuracy.py run --manifest fr/manifest.jsonl --model MODEL_DIR --config mode=file \
+  --config mode=stream,context_size=512,delay_ms=480 --config mode=stream,context_size=512,delay_ms=240 \
+  --config mode=stream,context_size=512,delay_ms=2400 --config mode=stream,context_size=512,delay_ms=480,audio_batch_ms=160 \
+  --config mode=stream,context_size=512,delay_ms=480,audio_batch_ms=320
+.venv/bin/python benchmarks/accuracy.py run --manifest fr/manifest-long.jsonl --model MODEL_DIR \
+  --config mode=stream,context_size=512 --config mode=stream,context_size=8192 --config mode=file
+```
+
+Scoring lowercases and turns punctuation into spaces but keeps accents, so numbers or
+accents written differently ("9 000" and "9000") count as errors.
+
+**This is synthetic speech from one macOS voice (`say -v Thomas`): 21 French sentences
+(84 s), and the same clips joined by 0.8 s of silence (100 s). It is a pipeline check and a
+relative comparison of settings, not evidence about human recordings.** Apple M5, MLX 0.32.4,
+6-bit model, 80 ms batches unless shown; [summary lines](accuracy-synthetic-results-m5.jsonl).
+Real-time factor (RTF) is wall time over audio time.
+
+| Manifest | Configuration | WER | CER | RTF |
+|---|---|---:|---:|---:|
+| 21 clips | file, delay 2400 ms | 2.62% | 1.13% | 0.415 |
+| 21 clips | stream, context 512, delay 480 ms | 2.62% | 1.13% | 0.557 |
+| 21 clips | stream, context 512, delay 240 ms | 3.75% | 1.59% | 0.553 |
+| 21 clips | stream, context 512, delay 2400 ms | 2.25% | 0.76% | 0.594 |
+| 21 clips | stream, context 512, delay 480 ms, batch 160 ms | 2.62% | 1.13% | 0.524 |
+| 21 clips | stream, context 512, delay 480 ms, batch 320 ms | 2.62% | 1.13% | 0.515 |
+| 100 s recording | stream, context 512, delay 480 ms | 2.25% | 0.74% | 0.455 |
+| 100 s recording | stream, context 8192, delay 480 ms | 2.25% | 0.74% | 0.461 |
+| 100 s recording | file, delay 2400 ms | 2.25% | 0.74% | 0.321 |
+
+Six word errors in every row are formatting only: "Étienne" as "Etienne", "1 204" and
+"9 000" without the space (two each), and "2e" as "deuxième". Most short-clip rows also write
+"douzième" as "12ème". The only real mishearing is at 240 ms: "Elle a payé" became "Et la payer".
